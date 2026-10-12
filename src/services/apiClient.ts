@@ -66,7 +66,7 @@ async function fetchWithRetry(
       `API ${lastResponse.status} after retries`
     );
   }
-  throw new NetworkError('Request failed after retries');
+  throw new NetworkError();
 }
 
 /** 解析单个 SSE event，返回其中拼接出的文本增量（解析失败返回空串） */
