@@ -22,6 +22,11 @@ interface ChatState {
    * 刻意不持久化：这是「当前页面上下文」，不是用户配置。
    */
   currentCharacterId: string | null;
+  /**
+   * 最后一次 AI 回复的**原始** fullContent（含 <game> 块，未经解析/剥离）。
+   * 只给 debug 视图用：UI 显示永远走 messages 里的 cleanContent。
+   */
+  lastRawContent: string | null;
   setCurrentCharacterId: (id: string | null) => void;
   sendMessage: (content: string) => Promise<void>;
   appendStreamChunk: (chunk: string) => void;
@@ -80,6 +85,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   isSending: false,
   streamingMessageId: null,
   currentCharacterId: null,
+  lastRawContent: null,
   abortController: null,
 
   setCurrentCharacterId: (id: string | null) => {
@@ -150,6 +156,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
       // ---- 游戏引擎收口：解析 → 改消息 → 落库 gameState ----
       // 解析只在这里做：finalizeStream 保持「只改状态」的单一职责。
+
+      // debug 用：留一份解析前的原文（含 <game> 块），UI 显示仍用 cleanContent
+      set({ lastRawContent: fullContent });
+
       const { cleanContent, gameAction } = parseGameBlock(fullContent);
 
       set((state) => ({
@@ -236,6 +246,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       isSending: false,
       streamingMessageId: null,
       abortController: null,
+      lastRawContent: null,
     });
   },
 

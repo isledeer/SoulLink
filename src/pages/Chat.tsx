@@ -41,7 +41,11 @@ export default function Chat() {
   const level = getAffectionLevel(affinity);
   const levelLabel = LEVEL_LABELS[level];
 
+  // debug 视图：AI 最后一条回复的原始 fullContent（含 <game> 块）
+  const lastRawContent = useChatStore((s) => s.lastRawContent);
+
   const [showSaves, setShowSaves] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 把当前角色告诉 chatStore：sendMessage 注入 system prompt 时要用。
@@ -144,12 +148,28 @@ export default function Chat() {
         <div className="text-xs text-text-secondary px-2">
           {affinity} · {levelLabel}
         </div>
+        <button
+          type="button"
+          onClick={() => setShowDebug(!showDebug)}
+          className="text-xs text-accent-500 px-2 py-1 rounded
+                     hover:bg-surface-200 dark:hover:bg-surface-700
+                     transition-colors"
+        >
+          RAW
+        </button>
         <Button variant="ghost" size="sm" onClick={() => setShowSaves(true)}>
           存档
         </Button>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {showDebug && (
+          <pre className="text-xs bg-surface-800 text-surface-100
+                          p-2 mb-2 overflow-auto max-h-40 rounded
+                          whitespace-pre-wrap break-words">
+            {lastRawContent ?? '(空)'}
+          </pre>
+        )}
         {messages
           .filter((m) => m.role !== 'system')
           .map((m) => (
