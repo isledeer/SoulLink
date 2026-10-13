@@ -12,9 +12,12 @@ const BASE_CLASSES =
   'inline-flex items-center justify-center rounded font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed';
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700',
-  secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
-  ghost: 'hover:bg-gray-100 text-gray-700',
+  primary: 'bg-primary-600 text-white hover:bg-primary-700',
+  secondary:
+    'bg-surface-200 text-text-primary hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-800 dark:text-surface-100',
+  ghost:
+    'hover:bg-surface-100 text-text-secondary dark:hover:bg-surface-800 dark:text-surface-100',
+  // 红是语义色：项目 accent 只有 500 一档，做不出 hover，暂留 Tailwind 默认红
   danger: 'bg-red-600 text-white hover:bg-red-700',
 };
 

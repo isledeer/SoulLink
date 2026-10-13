@@ -14,12 +14,15 @@ interface ChatState {
   failStream: (messageId: string, error: string) => void;
   clearChat: () => void;
   loadMessages: (messages: Message[]) => void;
+  abortController: AbortController | null;
+  abort: () => void;
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
   messages: [],
   isSending: false,
   streamingMessageId: null,
+  abortController: null,
 
   sendMessage: async (content: string) => {
     const { apiBaseUrl, apiKey, modelName, compatibilityMode } =
@@ -63,6 +66,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       streamingMessageId: aiMsgId,
     }));
 
+    const controller = new AbortController();
+    set({ abortController: controller });
+
     try {
       await apiClient.sendMessage(
         get().messages,
@@ -74,18 +80,25 @@ export const useChatStore = create<ChatState>()((set, get) => ({
           temperature: 0.8,
           compatibleMode: compatibilityMode,
         },
-        (chunk) => get().appendStreamChunk(chunk)
+        (chunk) => get().appendStreamChunk(chunk),
+        controller.signal
       );
 
       get().finalizeStream(aiMsgId);
     } catch (error) {
       // 用户主动中断时保留已生成内容，只有真正的失败才替换成错误文案
-      if (error instanceof Error && error.name === 'AbortError') {
+      if ((error as Error).name === 'AbortError') {
         get().finalizeStream(aiMsgId);
       } else {
         get().failStream(aiMsgId, '抱歉，生成内容时发生错误，请稍后重试。');
       }
+    } finally {
+      set({ abortController: null });
     }
+  },
+
+  abort: () => {
+    get().abortController?.abort();
   },
 
   appendStreamChunk: (chunk: string) => {
@@ -127,7 +140,12 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
 
   clearChat: () => {
-    set({ messages: [], isSending: false, streamingMessageId: null });
+    set({
+      messages: [],
+      isSending: false,
+      streamingMessageId: null,
+      abortController: null,
+    });
   },
 
   loadMessages: (messages: Message[]) => {
