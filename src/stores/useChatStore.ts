@@ -6,6 +6,7 @@ import { useSaveStore } from './useSaveStore';
 import {
   parseGameBlock,
   applyGameAction,
+  appendGameInstruction,
   buildSystemPrompt,
 } from '../systems/GameEngine';
 import { replacePlaceholders } from '../utils/template';
@@ -27,6 +28,11 @@ interface ChatState {
    * 只给 debug 视图用：UI 显示永远走 messages 里的 cleanContent。
    */
   lastRawContent: string | null;
+  /**
+   * 最后一次真正发给 API 的 messages 数组（JSON 美化后的字符串）。
+   * debug 视图用它诊断 Bug 2：first_mes 在数组里的位置、system 注入是否干扰历史。
+   */
+  lastApiMessages: string | null;
   setCurrentCharacterId: (id: string | null) => void;
   sendMessage: (content: string) => Promise<void>;
   appendStreamChunk: (chunk: string) => void;
@@ -86,6 +92,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   streamingMessageId: null,
   currentCharacterId: null,
   lastRawContent: null,
+  lastApiMessages: null,
   abortController: null,
 
   setCurrentCharacterId: (id: string | null) => {
@@ -138,7 +145,14 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set({ abortController: controller });
 
     try {
-      const apiMessages = buildApiMessages(get().messages, get().currentCharacterId);
+      const withSystem = buildApiMessages(get().messages, get().currentCharacterId);
+
+      // Bug 1 修复：把 game 输出指令附到最后一条 user 消息末尾。
+      // 放在 system prompt 里会被角色卡的沉浸式指令压过，真机上模型不输出 <game>。
+      const apiMessages = appendGameInstruction(withSystem);
+
+      // debug 用：留一份**实际发出**的数组（已含 system 注入与 game 指令）
+      set({ lastApiMessages: JSON.stringify(apiMessages, null, 2) });
 
       const fullContent = await apiClient.sendMessage(
         apiMessages,
@@ -247,6 +261,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       streamingMessageId: null,
       abortController: null,
       lastRawContent: null,
+      lastApiMessages: null,
     });
   },
 

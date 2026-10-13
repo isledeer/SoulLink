@@ -43,6 +43,8 @@ export default function Chat() {
 
   // debug 视图：AI 最后一条回复的原始 fullContent（含 <game> 块）
   const lastRawContent = useChatStore((s) => s.lastRawContent);
+  // debug 视图：实际发给模型的 messages 数组（诊断 first_mes 重复问题）
+  const lastApiMessages = useChatStore((s) => s.lastApiMessages);
 
   const [showSaves, setShowSaves] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
@@ -164,11 +166,25 @@ export default function Chat() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {showDebug && (
-          <pre className="text-xs bg-surface-800 text-surface-100
-                          p-2 mb-2 overflow-auto max-h-40 rounded
-                          whitespace-pre-wrap break-words">
-            {lastRawContent ?? '(空)'}
-          </pre>
+          <div className="border-t border-surface-200 dark:border-surface-700
+                          bg-surface-900 max-h-96 overflow-y-auto">
+            <div className="px-3 py-1 text-xs text-accent-500 font-bold
+                            border-b border-surface-700 sticky top-0 bg-surface-900">
+              ▶ API 输入（发给模型的 messages 数组）
+            </div>
+            <pre className="text-xs p-3 whitespace-pre-wrap break-words
+                            text-surface-100 max-h-48 overflow-y-auto">
+              {lastApiMessages ?? '(空 - 请先发一条消息)'}
+            </pre>
+            <div className="px-3 py-1 text-xs text-accent-500 font-bold
+                            border-b border-t border-surface-700 sticky top-0 bg-surface-900">
+              ▶ AI 原始输出（fullContent）
+            </div>
+            <pre className="text-xs p-3 whitespace-pre-wrap break-words
+                            text-surface-100 max-h-48 overflow-y-auto">
+              {lastRawContent ?? '(空 - 请先发一条消息)'}
+            </pre>
+          </div>
         )}
         {messages
           .filter((m) => m.role !== 'system')

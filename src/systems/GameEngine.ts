@@ -1,6 +1,7 @@
 import { updateAffection, getAffectionLevel } from './AffectionSystem';
 import { addItem, removeItem } from './InventorySystem';
 import type { GameState, InventoryItem } from '../types/game';
+import type { Message } from '../types/message';
 
 /**
  * AI 在回复末尾输出的游戏动作块。
@@ -14,6 +15,13 @@ export interface GameAction {
   scene?: string;
 }
 
+/**
+ * ⚠️ 已不再被 buildSystemPrompt 使用。
+ *
+ * Bug 1 修复后，game 指令改走 GAME_INSTRUCTION_SUFFIX + appendGameInstruction，
+ * 附加到最后一条 user 消息末尾（原因见 GAME_INSTRUCTION_SUFFIX 的注释）。
+ * 本常量仅为向后兼容保留，新代码请勿再用。
+ */
 export const DEFAULT_GAME_ENGINE_PROMPT = `你是一个角色扮演引擎，需要在回复末尾输出游戏状态变化。
 
 在回复的正文结束后，另起一行输出：
@@ -28,6 +36,45 @@ export const DEFAULT_GAME_ENGINE_PROMPT = `你是一个角色扮演引擎，需�
 - items_gained / items_lost / scene 是可选字段（数组 / 字符串）
 - <game> 行必须放在整个回复的最后，不要用代码块包裹
 - 不要在正文里提这件事，不要让用户察觉`;
+
+/**
+ * 附在最后一条 user 消息末尾的 game 指令（Bug 1 修复的核心）。
+ *
+ * 为什么不放 system prompt：角色卡自带的沉浸式指令（「完全沉浸角色，不要跳出」）
+ * 会把它压过去，真机上模型直接不输出 <game> 块。
+ * 放到 user 消息末尾 = 紧贴生成位置，且在 system 之后，优先级更高。
+ */
+export const GAME_INSTRUCTION_SUFFIX =
+  '请在回复正文结束后，另起一行输出：\n<game>{"affinity_delta": 0}</game>\n' +
+  '（affinity_delta 根据本轮对话情感倾向判断，-10 到 +10 之间的整数，无变化填 0。' +
+  '不要在正文里提到这个标记。）';
+
+/**
+ * 把 game 指令附加到最后一条 user 消息的末尾。
+ *
+ * - 找到最后一条 role === 'user' 的消息，content 末尾追加
+ *   `\n\n` + GAME_INSTRUCTION_SUFFIX
+ * - 返回**新数组 + 新消息对象**，绝不修改入参
+ * - 数组为空 / 没有 user 消息 → 原样返回入参（同一引用）
+ */
+export function appendGameInstruction(messages: Message[]): Message[] {
+  let lastUserIndex = -1;
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      lastUserIndex = i;
+      break;
+    }
+  }
+
+  if (lastUserIndex === -1) return messages;
+
+  return messages.map((m, i) =>
+    i === lastUserIndex
+      ? { ...m, content: `${m.content}\n\n${GAME_INSTRUCTION_SUFFIX}` }
+      : m
+  );
+}
 
 /** 匹配任意 <game>...</game> 块（非贪婪，跨行） */
 const GAME_BLOCK_RE = /<game>[\s\S]*?<\/game>/g;
@@ -166,8 +213,12 @@ export interface SystemPromptCharacter {
 }
 
 /**
- * 拼装发给模型的 system prompt：引擎规则 + 角色设定 + 当前游戏状态。
+ * 拼装发给模型的 system prompt：角色设定 + 当前游戏状态。
  * 角色卡里为空的字段整段跳过，不留空标题。
+ *
+ * ⚠️ 这里**不再包含** game 输出指令（Bug 1 修复）：
+ *   原先它拼在开头，被角色卡的沉浸式指令压过，真机上模型不输出 <game>。
+ *   现在 game 指令由 appendGameInstruction 附在最后一条 user 消息末尾。
  */
 export function buildSystemPrompt(
   character: SystemPromptCharacter,
@@ -176,9 +227,7 @@ export function buildSystemPrompt(
   const { name, description, personality, scenario, system_prompt } =
     character.data;
 
-  let prompt = DEFAULT_GAME_ENGINE_PROMPT;
-
-  prompt += '\n\n【角色设定】\n';
+  let prompt = '【角色设定】\n';
   if (name) prompt += `名称：${name}\n`;
   if (description) prompt += `描述：${description}\n`;
   if (personality) prompt += `性格：${personality}\n`;
