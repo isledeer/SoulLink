@@ -1,7 +1,16 @@
+import type { InventoryItem } from '../types/game';
+
+/**
+ * UI 层的完整物品定义（含 type / icon / effect）。
+ * 与 InventoryItem 通过 **id + type** 一一对应：Item 是定义（展示与效果），
+ * InventoryItem 是库存实例（数量）。因为字段已对齐，加进库存时可直接转换：
+ *   addItem(inventory, { id, name, description, type })
+ */
 export interface Item {
   id: string;
   name: string;
   description: string;
+  type: InventoryItem['type'];
   icon: string; // emoji 或图标 class
   effect?: {
     type: 'affection' | 'unlock_scene';
@@ -9,59 +18,48 @@ export interface Item {
   };
 }
 
-export interface InventoryState {
-  items: { itemId: string; quantity: number }[];
-}
-
 const DEFAULT_QTY = 1;
 
-/** 添加物品：已存在则数量相加，不存在则新增条目。不修改入参。 */
+/** 添加物品：已存在则数量相加，不存在则追加。不修改入参，返回新数组。 */
 export function addItem(
-  inventory: InventoryState,
-  itemId: string,
+  inventory: InventoryItem[],
+  item: Omit<InventoryItem, 'quantity'>,
   qty: number = DEFAULT_QTY
-): InventoryState {
-  const index = inventory.items.findIndex((entry) => entry.itemId === itemId);
+): InventoryItem[] {
+  const index = inventory.findIndex((entry) => entry.id === item.id);
 
   if (index === -1) {
-    return {
-      items: [...inventory.items, { itemId, quantity: qty }],
-    };
+    return [...inventory, { ...item, quantity: qty }];
   }
 
-  return {
-    items: inventory.items.map((entry, i) =>
-      i === index ? { ...entry, quantity: entry.quantity + qty } : entry
-    ),
-  };
+  return inventory.map((entry, i) =>
+    i === index ? { ...entry, quantity: entry.quantity + qty } : entry
+  );
 }
 
 /**
  * 移除物品。
- * 不存在或数量不足时**原样返回入参本身**（引用相等），调用方可用 `result === inventory` 判断是否发生变化。
+ * 找不到或数量不足时**原样返回入参数组本身**（引用相等），
+ * 调用方可用 `result === inventory` 判断是否发生变化。
  */
 export function removeItem(
-  inventory: InventoryState,
+  inventory: InventoryItem[],
   itemId: string,
   qty: number = DEFAULT_QTY
-): InventoryState {
-  const index = inventory.items.findIndex((entry) => entry.itemId === itemId);
+): InventoryItem[] {
+  const index = inventory.findIndex((entry) => entry.id === itemId);
 
   if (index === -1) return inventory;
 
-  const entry = inventory.items[index];
+  const entry = inventory[index];
   if (entry.quantity < qty) return inventory;
 
   // 数量刚好用尽 → 整条移除
   if (entry.quantity === qty) {
-    return {
-      items: inventory.items.filter((item) => item.itemId !== itemId),
-    };
+    return inventory.filter((item) => item.id !== itemId);
   }
 
-  return {
-    items: inventory.items.map((item, i) =>
-      i === index ? { ...item, quantity: item.quantity - qty } : item
-    ),
-  };
+  return inventory.map((item, i) =>
+    i === index ? { ...item, quantity: item.quantity - qty } : item
+  );
 }

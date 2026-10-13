@@ -1,6 +1,9 @@
+import { GAME_CONFIG } from '../constants';
 import type { Message } from '../types/message';
 
-export const COMPRESSION_THRESHOLD = 40;
+/** 压缩阈值统一由 constants 提供，避免与 GAME_CONFIG 出现两套数值 */
+export const COMPRESSION_THRESHOLD = GAME_CONFIG.MEMORY_COMPRESSION_THRESHOLD;
+/** 压缩后保留的最近消息条数（MemoryCompression 专属，不进 constants） */
 export const KEEP_RECENT = 10;
 
 const COMPRESS_PROMPT_ID = 'compress-prompt';

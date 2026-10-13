@@ -7,6 +7,7 @@ export interface Scene {
 }
 
 export const SCENES: Scene[] = [
+  { id: 'default', name: '默认场景' },
   { id: 'cafe', name: '街角咖啡馆', backgroundUrl: '/assets/bg/cafe.jpg' },
   { id: 'park', name: '中央公园', backgroundUrl: '/assets/bg/park.jpg' },
 ];
