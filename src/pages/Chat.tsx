@@ -9,7 +9,17 @@ import { SaveManager } from '../components/SaveManager';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { generateId } from '../utils/helpers';
+import { getAffectionLevel } from '../systems/AffectionSystem';
+import type { AffectionState } from '../systems/AffectionSystem';
 import type { Message } from '../types/message';
+
+/** 关系等级 → 中文标签（与 AffectionSystem.getAffectionLevel 的四个档位一一对应） */
+const LEVEL_LABELS: Record<AffectionState['level'], string> = {
+  stranger: '陌生',
+  friend: '朋友',
+  close: '亲密',
+  lover: '恋人',
+};
 
 export default function Chat() {
   const { characterId } = useParams<{ characterId: string }>();
@@ -23,8 +33,23 @@ export default function Chat() {
   const messages = useChatStore((s) => s.messages);
   const isSending = useChatStore((s) => s.isSending);
 
+  // 顶部好感度显示：跟随当前存档的 gameState
+  const currentSave = useSaveStore((s) =>
+    s.saves.find((x) => x.id === s.currentSaveId)
+  );
+  const affinity = currentSave?.gameState.affinity ?? 0;
+  const level = getAffectionLevel(affinity);
+  const levelLabel = LEVEL_LABELS[level];
+
   const [showSaves, setShowSaves] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 把当前角色告诉 chatStore：sendMessage 注入 system prompt 时要用。
+  // 卸载时清空，避免离开 Chat 页后残留上一个角色的上下文。
+  useEffect(() => {
+    useChatStore.getState().setCurrentCharacterId(characterId ?? null);
+    return () => useChatStore.getState().setCurrentCharacterId(null);
+  }, [characterId]);
 
   // 初始化：拉角色与存档，决定切档还是建新档。
   // 内部统一用 getState() 取最新值，避免依赖数组带来的陈旧闭包。
@@ -116,6 +141,9 @@ export default function Chat() {
         <h1 className="flex-1 font-semibold truncate text-text-primary dark:text-surface-100">
           {character?.data.name ?? '加载中...'}
         </h1>
+        <div className="text-xs text-text-secondary px-2">
+          {affinity} · {levelLabel}
+        </div>
         <Button variant="ghost" size="sm" onClick={() => setShowSaves(true)}>
           存档
         </Button>

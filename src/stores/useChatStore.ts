@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { apiClient } from '../services/apiClient';
 import { useSettingsStore } from './useSettingsStore';
+import { useCharacterStore } from './useCharacterStore';
+import { useSaveStore } from './useSaveStore';
+import {
+  parseGameBlock,
+  applyGameAction,
+  buildSystemPrompt,
+} from '../systems/GameEngine';
+import { replacePlaceholders } from '../utils/template';
 import { generateId } from '../utils/helpers';
 import type { Message } from '../types/message';
 
@@ -8,6 +16,13 @@ interface ChatState {
   messages: Message[];
   isSending: boolean;
   streamingMessageId: string | null;
+  /**
+   * 当前对话绑定的角色 id。
+   * 由 Chat 页挂载时写入、卸载时清空；sendMessage 靠它决定注入哪个角色的设定。
+   * 刻意不持久化：这是「当前页面上下文」，不是用户配置。
+   */
+  currentCharacterId: string | null;
+  setCurrentCharacterId: (id: string | null) => void;
   sendMessage: (content: string) => Promise<void>;
   appendStreamChunk: (chunk: string) => void;
   finalizeStream: (messageId: string) => void;
@@ -18,11 +33,58 @@ interface ChatState {
   abort: () => void;
 }
 
+/** 注入给模型的 system 消息用固定 id，便于调试时一眼认出它不是真实对话 */
+const SYSTEM_MESSAGE_ID = 'system-game';
+
+/**
+ * 构造真正发给 API 的消息数组。
+ *
+ * 与 store 里的 messages **完全解耦**（UI 继续显示原始 {{char}}），
+ * 返回的是全新数组与新对象，不改动任何 store 状态。
+ *
+ * 降级策略：拿不到角色或当前存档时，直接用原始 messages，不做任何注入。
+ */
+function buildApiMessages(
+  messages: Message[],
+  currentCharacterId: string | null
+): Message[] {
+  // 流式占位消息（content 为空）绝不能发给 API，空 assistant 消息会被部分服务端拒绝
+  const usable = messages.filter((m) => m.content.trim().length > 0);
+
+  if (!currentCharacterId) return usable;
+
+  const character = useCharacterStore.getState().getCharacterById(currentCharacterId);
+  if (!character) return usable;
+
+  const saveState = useSaveStore.getState();
+  const currentSave = saveState.saves.find((s) => s.id === saveState.currentSaveId);
+  if (!currentSave) return usable;
+
+  const systemMessage: Message = {
+    id: SYSTEM_MESSAGE_ID,
+    role: 'system',
+    content: buildSystemPrompt(character, currentSave.gameState),
+    timestamp: Date.now(),
+  };
+
+  const rest = usable.map((m) => ({
+    ...m,
+    content: replacePlaceholders(m.content, character.data.name, '你'),
+  }));
+
+  return [systemMessage, ...rest];
+}
+
 export const useChatStore = create<ChatState>()((set, get) => ({
   messages: [],
   isSending: false,
   streamingMessageId: null,
+  currentCharacterId: null,
   abortController: null,
+
+  setCurrentCharacterId: (id: string | null) => {
+    set({ currentCharacterId: id });
+  },
 
   sendMessage: async (content: string) => {
     const { apiBaseUrl, apiKey, modelName, compatibilityMode } =
@@ -70,8 +132,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set({ abortController: controller });
 
     try {
-      await apiClient.sendMessage(
-        get().messages,
+      const apiMessages = buildApiMessages(get().messages, get().currentCharacterId);
+
+      const fullContent = await apiClient.sendMessage(
+        apiMessages,
         {
           baseUrl: apiBaseUrl,
           apiKey,
@@ -83,6 +147,33 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         (chunk) => get().appendStreamChunk(chunk),
         controller.signal
       );
+
+      // ---- 游戏引擎收口：解析 → 改消息 → 落库 gameState ----
+      // 解析只在这里做：finalizeStream 保持「只改状态」的单一职责。
+      const { cleanContent, gameAction } = parseGameBlock(fullContent);
+
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          m.id === aiMsgId ? { ...m, content: cleanContent } : m
+        ),
+      }));
+
+      if (gameAction) {
+        const saveState = useSaveStore.getState();
+        const currentSave = saveState.saves.find(
+          (s) => s.id === saveState.currentSaveId
+        );
+
+        if (currentSave) {
+          const newGameState = applyGameAction(currentSave.gameState, gameAction);
+          // 落库失败不能连累对话：消息已经生成完了，这里只记录错误
+          try {
+            await saveState.updateGameState(currentSave.id, newGameState);
+          } catch (error) {
+            console.error('[GameEngine] 游戏状态保存失败', error);
+          }
+        }
+      }
 
       get().finalizeStream(aiMsgId);
     } catch (error) {

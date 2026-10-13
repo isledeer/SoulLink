@@ -20,6 +20,7 @@ interface SaveStore {
   loadSaves: () => Promise<void>;
   createSave: (init: CreateSaveInit) => Promise<string>;
   updateSave: (id: string, patch: Partial<SaveFile>) => Promise<void>;
+  updateGameState: (id: string, gameState: GameState) => Promise<void>;
   deleteSave: (id: string) => Promise<void>;
   switchSave: (id: string) => Promise<void>;
   setCurrentSave: (id: string | null) => void;
@@ -81,6 +82,15 @@ export const useSaveStore = create<SaveStore>()(
             s.id === id ? { ...merged, updatedAt } : s
           ),
         }));
+      },
+
+      /**
+       * 只替换 gameState，其余字段保持原样。
+       * 与 updateSave 分开，是为了给 GameEngine 一个「语义明确、不会被
+       * 顺手改到 messages」的入口；内部仍复用 updateSave 的落库 + 内存同步逻辑。
+       */
+      updateGameState: async (id: string, gameState: GameState) => {
+        await get().updateSave(id, { gameState });
       },
 
       deleteSave: async (id: string) => {
