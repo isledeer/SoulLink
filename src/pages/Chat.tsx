@@ -207,6 +207,7 @@ export default function Chat() {
               timestamp={m.timestamp}
               onEdit={handleEditMessage}
               onDelete={handleDeleteMessage}
+                charName={character?.data.name ?? ''}
             />
           ))}
         <div ref={messagesEndRef} />

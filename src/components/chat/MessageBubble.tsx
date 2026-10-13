@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { replacePlaceholders } from '../../utils/template';
 
 interface MessageBubbleProps {
   /** 消息 id：编辑/删除回调要带回去定位是哪一条 */
   id: string;
   content: string;
+  charName?: string;
   isUser: boolean;
   isStreaming?: boolean;
   timestamp: number;
@@ -38,6 +40,7 @@ const MENU_ITEM_CLASSES =
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   id,
   content,
+  charName,
   isUser,
   isStreaming = false,
   timestamp,
@@ -212,7 +215,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         ) : (
           <p className="whitespace-pre-wrap break-words">
-            {content}
+            {charName ? replacePlaceholders(content, charName, '你') : content}
             {isStreaming && (
               <span
                 className="inline-block w-1 h-4 ml-1 bg-current animate-pulse align-text-bottom"
