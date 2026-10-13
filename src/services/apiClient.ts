@@ -1,6 +1,6 @@
 import { AppError, APIError, NetworkError } from './errorHandler';
-import { API_ENDPOINTS } from '../constants';
-import type { APIConfig } from '../types/api';
+import { API_ENDPOINTS, REASONING_PROVIDERS } from '../constants';
+import type { APIConfig, ReasoningEffort, ReasoningProvider } from '../types/api';
 import type { Message } from '../types/message';
 
 const DEFAULT_MAX_RETRIES = 3;
@@ -135,15 +135,74 @@ async function readSSEStream(
   return fullContent;
 }
 
+/**
+ * 由 model 名推断厂商族：对 modelName 转小写后遍历 REASONING_PROVIDERS 的 key 做 includes。
+ * 命中即返回对应族，全部不中返回 'unknown'。
+ */
+export function detectReasoningProvider(modelName: string): ReasoningProvider {
+  const name = (modelName || '').toLowerCase();
+
+  for (const key of Object.keys(REASONING_PROVIDERS)) {
+    if (name.includes(key)) return REASONING_PROVIDERS[key];
+  }
+
+  return 'unknown';
+}
+
+/**
+ * 把「思考强度」翻译成各家请求体里要合并的额外字段。
+ *
+ * - openai    : reasoning_effort
+ * - anthropic : thinking（budget_tokens 按档位给 8192/4096/2048）
+ * - deepseek  : {}  R1 不需要传
+ * - gemini    : {}  暂不实现
+ * - unknown   : {}  不敢乱塞字段，避免被服务端 400
+ *
+ * effort 为 undefined（用户选了「关闭」）时一律返回空对象。
+ */
+export function reasoningEffortToParams(
+  provider: ReasoningProvider,
+  effort: ReasoningEffort | undefined
+): Record<string, unknown> {
+  if (!effort) return {};
+
+  switch (provider) {
+    case 'openai':
+      return { reasoning_effort: effort };
+    case 'anthropic':
+      return {
+        thinking: {
+          type: 'enabled',
+          budget_tokens: effort === 'high' ? 8192 : effort === 'medium' ? 4096 : 2048,
+        },
+      };
+    case 'deepseek':
+      return {};
+    case 'gemini':
+      return {};
+    default:
+      return {};
+  }
+}
+
 export const apiClient = {
   async sendMessage(
     messages: Message[],
     config: APIConfig,
     onChunk?: (chunk: string) => void,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    options?: { reasoningEffort?: ReasoningEffort }
   ): Promise<string> {
     // 去掉 baseUrl 末尾斜杠后拼接，不替用户补 /v1（用户可能已经自带）
     const url = config.baseUrl.replace(/\/+$/, '') + API_ENDPOINTS.CHAT_COMPLETIONS;
+
+    // 思考强度参数按 model 推断厂商后再 merge；unknown/关闭时为 {}，不影响原有字段
+    // 取值优先用调用方显式传的 options，其次用 config 里的字段（两条路径都支持）
+    const effort = options?.reasoningEffort ?? config.reasoningEffort;
+    const reasoningParams = reasoningEffortToParams(
+      detectReasoningProvider(config.model),
+      effort
+    );
 
     const body = {
       model: config.model,
@@ -151,6 +210,7 @@ export const apiClient = {
       max_tokens: config.maxTokens,
       temperature: config.temperature,
       stream: !!onChunk,
+      ...reasoningParams,
     };
 
     const response = await fetchWithRetry(url, {

@@ -1,3 +1,5 @@
+import type { ReasoningProvider } from '../types/api';
+
 export const API_ENDPOINTS = {
   CHAT_COMPLETIONS: '/v1/chat/completions',
   MODELS: '/v1/models',
@@ -19,3 +21,17 @@ export const GAME_CONFIG = {
   MAX_CONTEXT_TOKENS: 4096,
   STREAM_CHUNK_SIZE: 1024,
 } as const;
+
+/**
+ * model 名片段 → 厂商族。键统一小写，匹配时对 modelName 做 toLowerCase 后 includes。
+ * 顺序即优先级：越靠前的 key 越先被命中（'gpt-' 在 'openai' 之后，两者不冲突）。
+ */
+export const REASONING_PROVIDERS: Record<string, ReasoningProvider> = {
+  openai: 'openai',
+  'gpt-': 'openai',
+  'o1': 'openai',
+  'o3': 'openai',
+  deepseek: 'deepseek',
+  claude: 'anthropic',
+  gemini: 'gemini',
+};

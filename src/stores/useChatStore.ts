@@ -59,8 +59,11 @@ function buildApiMessages(
   messages: Message[],
   currentCharacterId: string | null
 ): Message[] {
+  // 失败产生的错误文案绝不能进 API 输入：它不是角色说过的话
+  const withoutErrors = messages.filter((m) => !m.isError);
+
   // 流式占位消息（content 为空）绝不能发给 API，空 assistant 消息会被部分服务端拒绝
-  const usable = messages.filter((m) => m.content.trim().length > 0);
+  const usable = withoutErrors.filter((m) => m.content.trim().length > 0);
 
   if (!currentCharacterId) return usable;
 
@@ -163,6 +166,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
           maxTokens: 1024,
           temperature: 0.8,
           compatibleMode: compatibilityMode,
+          reasoningEffort: useSettingsStore.getState().reasoningEffort,
         },
         (chunk) => get().appendStreamChunk(chunk),
         controller.signal
@@ -247,7 +251,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   failStream: (messageId: string, error: string) => {
     set((state) => ({
       messages: state.messages.map((m) =>
-        m.id === messageId ? { ...m, content: error, isStreaming: false } : m
+        m.id === messageId
+          ? { ...m, content: error, isStreaming: false, isError: true }
+          : m
       ),
       isSending: false,
       streamingMessageId: null,
