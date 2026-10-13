@@ -129,6 +129,15 @@ export default function Chat() {
     useChatStore.getState().abort();
   };
 
+  // 走 getState() 而非订阅：这两个 action 引用恒定，订阅只会白白触发重渲染（与 handleSend 同一写法）
+  const handleEditMessage = (id: string, newContent: string) => {
+    useChatStore.getState().editMessage(id, newContent);
+  };
+
+  const handleDeleteMessage = (id: string) => {
+    useChatStore.getState().deleteMessage(id);
+  };
+
   if (!character) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -191,10 +200,13 @@ export default function Chat() {
           .map((m) => (
             <MessageBubble
               key={m.id}
+              id={m.id}
               content={m.content}
               isUser={m.role === 'user'}
               isStreaming={m.isStreaming}
               timestamp={m.timestamp}
+              onEdit={handleEditMessage}
+              onDelete={handleDeleteMessage}
             />
           ))}
         <div ref={messagesEndRef} />
