@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { replacePlaceholders } from '../../utils/template';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface MessageBubbleProps {
   /** 消息 id：编辑/删除回调要带回去定位是哪一条 */
@@ -213,16 +214,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </button>
             </div>
           </div>
-        ) : (
+        ) : isStreaming ? (
+          /**
+           * 流式中保持纯文本：此刻 markdown 还不完整（三反引号 / $$ 只有一半），
+           * 每来一个 chunk 重新解析会让版面反复跳动，且未闭合的记号会闪烁。
+           * 等 finalizeStream 把 isStreaming 置 false，下一帧自然切到 MarkdownRenderer。
+           *
+           * {{char}} 替换在两条分支里都必须执行（Bug 4 修复不能破）。
+           */
           <p className="whitespace-pre-wrap break-words">
             {charName ? replacePlaceholders(content, charName, '你') : content}
-            {isStreaming && (
-              <span
-                className="inline-block w-1 h-4 ml-1 bg-current animate-pulse align-text-bottom"
-                aria-hidden="true"
-              />
-            )}
+            <span
+              className="inline-block w-1 h-4 ml-1 bg-current animate-pulse align-text-bottom"
+              aria-hidden="true"
+            />
           </p>
+        ) : (
+          <MarkdownRenderer
+            content={charName ? replacePlaceholders(content, charName, '你') : content}
+          />
         )}
 
         <div
