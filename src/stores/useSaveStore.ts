@@ -6,9 +6,13 @@ import { generateId } from '../utils/helpers';
 import type { SaveFile } from '../types/save';
 import type { GameState } from '../types/game';
 
+/** 自由对话（无角色卡）存档的默认名 */
+export const FREE_CHAT_SAVE_NAME = 'isledeer 的对话';
+
 interface CreateSaveInit {
-  name: string;
-  characterId: string;
+  /** null = 自由对话（内置 isledeer），不绑定任何角色卡 */
+  characterId: string | null;
+  name?: string;
   messages?: SaveFile['messages'];
   gameState?: Partial<GameState>;
 }
@@ -41,9 +45,16 @@ export const useSaveStore = create<SaveStore>()(
         const id = generateId();
         const now = Date.now();
 
+        // 自由对话（characterId === null）没给名字时用 isledeer 默认名兜底；
+        // 带角色的存档若也漏传名字，用「未命名对话」兜底，避免存出一个空标题的档。
+        const trimmedName = (init.name ?? '').trim();
+        const name =
+          trimmedName ||
+          (init.characterId === null ? FREE_CHAT_SAVE_NAME : '未命名对话');
+
         const full: SaveFile = {
           id,
-          name: init.name,
+          name,
           characterId: init.characterId,
           messages: init.messages ?? [],
           gameState: {

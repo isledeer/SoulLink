@@ -69,9 +69,24 @@ async function fetchWithRetry(
   throw new NetworkError();
 }
 
-/** 解析单个 SSE event，返回其中拼接出的文本增量（解析失败返回空串） */
-function parseSSEEvent(event: string): string {
-  let content = '';
+/** 流式增量的类型：正文 or 思维链。UI 据此决定往哪个字段追加 */
+export interface StreamChunk {
+  type: 'content' | 'reasoning';
+  text: string;
+}
+
+/**
+ * 解析单个 SSE event，返回其中按出现顺序拼接出的增量列表。
+ *
+ * 同时识别两种 delta：
+ * - `delta.content`           → 正文
+ * - `delta.reasoning_content` → 思维链（DeepSeek-R1 / 部分兼容端点）
+ *
+ * 返回数组而不是字符串：一个 event 里可能既有思维链又有正文，
+ * 合成一个字符串会丢掉「哪段是思维链」的信息。解析失败返回空数组。
+ */
+function parseSSEEvent(event: string): StreamChunk[] {
+  const chunks: StreamChunk[] = [];
 
   for (const line of event.split('\n')) {
     const trimmed = line.trim();
@@ -82,22 +97,38 @@ function parseSSEEvent(event: string): string {
 
     try {
       const parsed = JSON.parse(data) as {
-        choices?: { delta?: { content?: string } }[];
+        choices?: {
+          delta?: { content?: string; reasoning_content?: string };
+        }[];
       };
-      const delta = parsed?.choices?.[0]?.delta?.content;
-      if (delta) content += delta;
+      const delta = parsed?.choices?.[0]?.delta;
+      if (!delta) continue;
+
+      // 顺序固定为先思维链后正文：同一 delta 里两者同时到达时，
+      // 思维链在语义上总是先于正文，与 R1 的实际输出顺序一致。
+      if (delta.reasoning_content) {
+        chunks.push({ type: 'reasoning', text: delta.reasoning_content });
+      }
+      if (delta.content) {
+        chunks.push({ type: 'content', text: delta.content });
+      }
     } catch {
       // 单个 event 解析失败静默跳过，不影响后续 event
     }
   }
 
-  return content;
+  return chunks;
 }
 
-/** 流式读取 SSE 响应体，逐块回调并返回完整文本 */
+/**
+ * 流式读取 SSE 响应体，逐块回调。
+ *
+ * 返回**正文**的完整文本（不含思维链）：调用方拿它做 <game> 解析与空白判定。
+ * 思维链不在这里聚合，由 onChunk 逐块交给 store 累积到消息的 reasoning 字段。
+ */
 async function readSSEStream(
   body: ReadableStream<Uint8Array>,
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: StreamChunk) => void
 ): Promise<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -116,9 +147,8 @@ async function readSSEStream(
     buffer = events.pop() ?? '';
 
     for (const event of events) {
-      const chunk = parseSSEEvent(event);
-      if (chunk) {
-        fullContent += chunk;
+      for (const chunk of parseSSEEvent(event)) {
+        if (chunk.type === 'content') fullContent += chunk.text;
         onChunk(chunk);
       }
     }
@@ -126,10 +156,9 @@ async function readSSEStream(
 
   // 冲刷解码器与残留 buffer：部分服务端最后一个 event 不带结尾空行
   buffer += decoder.decode();
-  const tail = parseSSEEvent(buffer);
-  if (tail) {
-    fullContent += tail;
-    onChunk(tail);
+  for (const chunk of parseSSEEvent(buffer)) {
+    if (chunk.type === 'content') fullContent += chunk.text;
+    onChunk(chunk);
   }
 
   return fullContent;
@@ -186,10 +215,17 @@ export function reasoningEffortToParams(
 }
 
 export const apiClient = {
+  /**
+   * 发送一轮对话。
+   *
+   * onChunk 的入参是 { type, text }：`reasoning` 是思维链增量，`content` 是正文增量。
+   * 调用方按 type 分别累加到消息的 reasoning / content 字段（见 useChatStore）。
+   * 返回值为**正文**的完整拼接结果（不含思维链）。
+   */
   async sendMessage(
     messages: Message[],
     config: APIConfig,
-    onChunk?: (chunk: string) => void,
+    onChunk?: (chunk: StreamChunk) => void,
     abortSignal?: AbortSignal,
     options?: { reasoningEffort?: ReasoningEffort }
   ): Promise<string> {
@@ -236,8 +272,12 @@ export const apiClient = {
     }
 
     const data = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
+      choices?: {
+        message?: { content?: string; reasoning_content?: string };
+      }[];
     };
+    // 非流式分支没有 onChunk 通道回传思维链，返回值保持「正文」语义不变。
+    // 当前所有对话都走流式；此分支只服务内部压缩这类无 UI 的调用。
     return data?.choices?.[0]?.message?.content || '';
   },
 };

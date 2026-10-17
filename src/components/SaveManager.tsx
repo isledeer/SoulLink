@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useSaveStore } from '../stores/useSaveStore';
 
 interface SaveManagerProps {
-  characterId: string;
+  /** null = 自由对话存档；新建时原样写回，不能强转成 ''（'' 不等于 null，会错档） */
+  characterId: string | null;
 }
 
 const ROW_BASE = 'p-3 rounded-xl border cursor-pointer transition-all';

@@ -6,6 +6,12 @@ interface MessageBubbleProps {
   /** 消息 id：编辑/删除回调要带回去定位是哪一条 */
   id: string;
   content: string;
+  /**
+   * 思维链原文（DeepSeek-R1 等模型的 reasoning_content）。
+   * 与 content 分开渲染：这里只出纯文本，绝不进 Markdown/KaTeX ——
+   * 思维链里全是未闭合的记号，解析既卡又乱。
+   */
+  reasoning?: string;
   charName?: string;
   isUser: boolean;
   isStreaming?: boolean;
@@ -29,6 +35,74 @@ const MENU_ITEM_CLASSES =
   'block w-full text-left px-3 py-2 text-sm text-text-primary dark:text-surface-100 ' +
   'hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors';
 
+/** 流式中的跳动光标。正文与思维链各用一次，语义保持一致 */
+const CARET_CLASSES =
+  'inline-block w-1 h-3.5 ml-1 bg-current animate-pulse align-text-bottom';
+
+/**
+ * 思维链折叠面板（「思考过程」）。
+ *
+ * 为什么不用原生 <details>：折叠本身虽然可以由浏览器维护，但「流式结束瞬间自动折叠」
+ * 是**程序化**的 —— 用原生标签就得拿 DOM 引用去改 open 属性，绕开 React 的状态模型。
+ * 这里用 useState + button，把折叠状态完整交给 React。
+ *
+ * 状态机：
+ * - isStreaming false→true（开始生成）→ 自动展开，思维链实时滚动
+ * - isStreaming true→false（生成结束）→ 自动折叠，标题变「已深度思考（点击展开）」
+ * - 用户在这两次切换之间手动开合 → 保持不动，与流式状态解耦
+ *
+ * 面板内容刻意只做纯文本：思维链里全是没闭合的 markdown/LaTeX 记号，
+ * 交给 MarkdownRenderer 既卡主线程，也会渲染出一堆中间态。
+ */
+const ReasoningPanel: React.FC<{ reasoning: string; isStreaming: boolean }> = ({
+  reasoning,
+  isStreaming,
+}) => {
+  const [open, setOpen] = useState(isStreaming);
+  const prevStreaming = useRef(isStreaming);
+
+  useEffect(() => {
+    if (prevStreaming.current === isStreaming) return;
+    prevStreaming.current = isStreaming;
+    setOpen(isStreaming);
+  }, [isStreaming]);
+
+  return (
+    <div className="mb-2 rounded-lg overflow-hidden border border-surface-300 dark:border-surface-700 bg-surface-0 dark:bg-surface-800">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+      >
+        {isStreaming ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary dark:text-surface-300">
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"
+              aria-hidden="true"
+            />
+            思考中...
+          </span>
+        ) : (
+          <span className="text-xs text-text-secondary dark:text-surface-300">
+            已深度思考（点击展开）
+          </span>
+        )}
+        <span className="text-[10px] shrink-0 text-text-secondary dark:text-surface-300">
+          {open ? '收起' : '展开'}
+        </span>
+      </button>
+
+      {open && (
+        <p className="px-3 pb-2 pt-0.5 text-xs italic whitespace-pre-wrap break-words text-text-secondary dark:text-surface-300">
+          {reasoning}
+          {isStreaming && <span className={CARET_CLASSES} aria-hidden="true" />}
+        </p>
+      )}
+    </div>
+  );
+};
+
 /**
  * 刻意不做打字机效果：
  * 本项目的打字机观感由「流式 chunk 陆续 appendStreamChunk 进 content」自然产生。
@@ -41,6 +115,7 @@ const MENU_ITEM_CLASSES =
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   id,
   content,
+  reasoning,
   charName,
   isUser,
   isStreaming = false,
@@ -170,6 +245,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     onDelete?.(id);
   };
 
+  // {{char}} → 角色名。自由对话下 charName 恒为 'isledeer'，替换照常执行
+  const displayContent = charName
+    ? replacePlaceholders(content, charName, '你')
+    : content;
+
   return (
     <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -188,6 +268,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             : 'bg-surface-200 text-text-primary rounded-bl-none dark:bg-surface-700 dark:text-surface-100'
         }`}
       >
+        {/**
+          * 思维链面板放在正文气泡**上方**，编辑态下不显示：
+          * 编辑改的是正文，此时把思维链摊在旁边只会让人分心。
+          */}
+        {reasoning && !isEditing && (
+          <ReasoningPanel reasoning={reasoning} isStreaming={isStreaming} />
+        )}
+
         {isEditing ? (
           <div className="min-w-[12rem]">
             <textarea
@@ -216,23 +304,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         ) : isStreaming ? (
           /**
-           * 流式中保持纯文本：此刻 markdown 还不完整（三反引号 / $$ 只有一半），
-           * 每来一个 chunk 重新解析会让版面反复跳动，且未闭合的记号会闪烁。
-           * 等 finalizeStream 把 isStreaming 置 false，下一帧自然切到 MarkdownRenderer。
+           * 流式中**绝对不渲染 MarkdownRenderer**：此刻 markdown 还不完整
+           * （三反引号 / $$ 只有一半），每来一个 chunk 就把整段交给 remark/rehype
+           * + KaTeX 重新解析，长回复下主线程会被解析吃满，表现就是「一次性卡死」。
+           * 这里退化成纯文本节点，代价只是没有样式，换来的是逐字平滑。
            *
-           * {{char}} 替换在两条分支里都必须执行（Bug 4 修复不能破）。
+           * 等 finalizeStream 把 isStreaming 置 false，同一次渲染里自然切回
+           * MarkdownRenderer，不需要额外状态。
            */
           <p className="whitespace-pre-wrap break-words">
-            {charName ? replacePlaceholders(content, charName, '你') : content}
-            <span
-              className="inline-block w-1 h-4 ml-1 bg-current animate-pulse align-text-bottom"
-              aria-hidden="true"
-            />
+            {displayContent}
+            <span className={CARET_CLASSES} aria-hidden="true" />
           </p>
         ) : (
-          <MarkdownRenderer
-            content={charName ? replacePlaceholders(content, charName, '你') : content}
-          />
+          <MarkdownRenderer content={displayContent} />
         )}
 
         <div

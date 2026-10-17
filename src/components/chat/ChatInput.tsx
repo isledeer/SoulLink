@@ -36,11 +36,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       onSubmit={handleSubmit}
       className="p-4 border-t border-surface-200 dark:border-surface-700 flex gap-2 bg-surface-0 dark:bg-surface-900"
     >
+      {/*
+        生成期间**不禁用**输入框：markdown 降级为纯文本后主线程不再被解析吃满，
+        输入框本来就该保持可点、可打字（可以先把下一条想好）。
+        真正拦住的是提交 —— handleSubmit 里 isGenerating 会直接 return，
+        且按钮此刻是「停止」，不存在误发。
+      */}
       <textarea rows={1}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="输入消息..."
-        disabled={isGenerating || disabled}
+        placeholder={isGenerating ? '生成中，可先输入下一条...' : '输入消息...'}
+        disabled={disabled}
         className="flex-1 p-2 border border-surface-300 dark:border-surface-700 rounded bg-surface-0 dark:bg-surface-800 text-text-primary dark:text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none max-h-32 overflow-y-auto"
       />
       {isGenerating ? (

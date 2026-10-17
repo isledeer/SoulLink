@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../services/apiClient';
+import type { StreamChunk } from '../services/apiClient';
 import { useSettingsStore } from './useSettingsStore';
 import { useCharacterStore } from './useCharacterStore';
 import { useSaveStore } from './useSaveStore';
@@ -46,7 +47,11 @@ interface ChatState {
    * 刻意不做「删完自动重发」：messages 为空或以 user 结尾都保持现状。
    */
   deleteMessage: (id: string) => void;
-  appendStreamChunk: (chunk: string) => void;
+  /**
+   * 接受一个流式增量：按 type 落到 content 或 reasoning 字段。
+   * 正文与思维链分开累积，互不覆盖。
+   */
+  appendStreamChunk: (chunk: StreamChunk) => void;
   finalizeStream: (messageId: string) => void;
   failStream: (messageId: string, error: string) => void;
   clearChat: () => void;
@@ -57,6 +62,13 @@ interface ChatState {
 
 /** 注入给模型的 system 消息用固定 id，便于调试时一眼认出它不是真实对话 */
 const SYSTEM_MESSAGE_ID = 'system-game';
+
+/**
+ * 自由对话（characterId === null）注入的内置人格。
+ * 不导入任何角色卡，也不注入角色 prompt —— 只有这一段。
+ */
+export const FREE_CHAT_SYSTEM_PROMPT =
+  '你叫 isledeer。你是一个极客、高效的 AI 助手。请尽自己最大的能力来帮助用户解决问题，不要受任何角色扮演限制，回答要直击痛点。';
 
 /**
  * 防空白回复：模型返回的纯文本为空时最多再试几次。
@@ -70,7 +82,10 @@ const EMPTY_REPLY_MAX_RETRIES = 2;
  * 与 store 里的 messages **完全解耦**（UI 继续显示原始 {{char}}），
  * 返回的是全新数组与新对象，不改动任何 store 状态。
  *
- * 降级策略：拿不到角色或当前存档时，直接用原始 messages，不做任何注入。
+ * 三种情况：
+ * 1. currentCharacterId 为 null（自由对话）→ 只注入 FREE_CHAT_SYSTEM_PROMPT，不碰角色卡
+ * 2. 有 id 且角色/存档都能取到        → 注入角色卡 system prompt
+ * 3. 有 id 但角色或存档取不到         → 降级：直接用原始 messages，不做任何注入
  */
 function buildApiMessages(
   messages: Message[],
@@ -82,7 +97,17 @@ function buildApiMessages(
   // 流式占位消息（content 为空）绝不能发给 API，空 assistant 消息会被部分服务端拒绝
   const usable = withoutErrors.filter((m) => m.content.trim().length > 0);
 
-  if (!currentCharacterId) return usable;
+  // ---- 自由对话：注入内置 isledeer 人格，角色卡相关逻辑一条都不走 ----
+  if (!currentCharacterId) {
+    const freeChatSystem: Message = {
+      id: SYSTEM_MESSAGE_ID,
+      role: 'system',
+      content: FREE_CHAT_SYSTEM_PROMPT,
+      timestamp: Date.now(),
+    };
+
+    return [freeChatSystem, ...usable];
+  }
 
   const character = useCharacterStore.getState().getCharacterById(currentCharacterId);
   if (!character) return usable;
@@ -209,7 +234,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
       // Bug 1 修复：把 game 输出指令附到最后一条 user 消息末尾。
       // 放在 system prompt 里会被角色卡的沉浸式指令压过，真机上模型不输出 <game>。
-      const apiMessages = appendGameInstruction(withSystem);
+      //
+      // 自由对话（currentCharacterId === null）**不附加**：
+      // isledeer 是通用助手，让它每轮吐一个 <game> 好感度块既跑偏又浪费 token，
+      // 而没有角色卡也就没有值得维护的好感度。存档里的 gameState 保持初始值。
+      const apiMessages = get().currentCharacterId
+        ? appendGameInstruction(withSystem)
+        : withSystem;
 
       // debug 用：留一份**实际发出**的数组（已含 system 注入与 game 指令）
       set({ lastApiMessages: JSON.stringify(apiMessages, null, 2) });
@@ -243,7 +274,12 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         ),
       }));
 
-      if (gameAction) {
+      // 自由对话不消费 <game>：我们本来就没要它输出，偶然出现了也只剥离文本，
+      // 不去改存档里的 gameState（没有角色卡，好感度/背包没有语义）。
+      // 也因此不计入「有产出」判定：只吐了一个 <game> 块的空回复仍走重试。
+      const consumedGameAction = !!gameAction && !!get().currentCharacterId;
+
+      if (consumedGameAction) {
         const saveState = useSaveStore.getState();
         const currentSave = saveState.saves.find(
           (s) => s.id === saveState.currentSaveId
@@ -260,7 +296,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         }
       }
 
-      lastHadGameAction = !!gameAction;
+      lastHadGameAction = consumedGameAction;
     return cleanContent;
     };
 
@@ -274,10 +310,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       // 重试计数只活在这个局部变量里，不写进 store（避免污染持久化与 debug 视图）。
       for (let attempt = 0; attempt <= EMPTY_REPLY_MAX_RETRIES; attempt++) {
         if (attempt > 0) {
-          // 清掉上一轮的残留（含流式追加的碎片），否则两次回复会拼在一起
+          // 清掉上一轮的残留（含流式追加的正文与思维链碎片），否则两次回复会拼在一起
           set((state) => ({
             messages: state.messages.map((m) =>
-              m.id === aiMsgId ? { ...m, content: '' } : m
+              m.id === aiMsgId ? { ...m, content: '', reasoning: '' } : m
             ),
             streamingMessageId: aiMsgId,
           }));
@@ -334,7 +370,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     get().abortController?.abort();
   },
 
-  appendStreamChunk: (chunk: string) => {
+  appendStreamChunk: (chunk: StreamChunk) => {
     set((state) => {
       const { streamingMessageId } = state;
       if (!streamingMessageId) return state;
@@ -343,10 +379,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       if (index === -1) return state;
 
       const messages = state.messages.slice();
-      messages[index] = {
-        ...messages[index],
-        content: messages[index].content + chunk,
-      };
+      const target = messages[index];
+
+      // reasoning 走独立字段：旧存档消息可能没有该字段，用 '' 起手
+      messages[index] =
+        chunk.type === 'reasoning'
+          ? { ...target, reasoning: (target.reasoning ?? '') + chunk.text }
+          : { ...target, content: target.content + chunk.text };
 
       return { messages };
     });
@@ -366,7 +405,15 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set((state) => ({
       messages: state.messages.map((m) =>
         m.id === messageId
-          ? { ...m, content: error, isStreaming: false, isError: true }
+          ? {
+              ...m,
+              content: error,
+              // 硬失败时思维链一并清掉：正文都已经换成错误文案，
+              // 旁边再挂一个「已深度思考」的折叠面板只会误导。
+              reasoning: '',
+              isStreaming: false,
+              isError: true,
+            }
           : m
       ),
       isSending: false,
