@@ -36,12 +36,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       onSubmit={handleSubmit}
       className="p-4 border-t border-surface-200 dark:border-surface-700 flex gap-2 bg-surface-0 dark:bg-surface-900"
     >
-      <input
+      <textarea rows={1}
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="输入消息..."
         disabled={isGenerating || disabled}
-        className="flex-1 p-2 border border-surface-300 dark:border-surface-700 rounded bg-surface-0 dark:bg-surface-800 text-text-primary dark:text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex-1 p-2 border border-surface-300 dark:border-surface-700 rounded bg-surface-0 dark:bg-surface-800 text-text-primary dark:text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none max-h-32 overflow-y-auto"
       />
       {isGenerating ? (
         <button
