@@ -80,7 +80,7 @@ export interface StreamChunk {
  *
  * 同时识别两种 delta：
  * - `delta.content`           → 正文
- * - `delta.reasoning_content` → 思维链（DeepSeek-R1 / 部分兼容端点）
+ * - `(delta.reasoning_content || delta.reasoning || delta.thinking)` → 思维链（DeepSeek-R1 / 部分兼容端点）
  *
  * 返回数组而不是字符串：一个 event 里可能既有思维链又有正文，
  * 合成一个字符串会丢掉「哪段是思维链」的信息。解析失败返回空数组。
@@ -98,7 +98,7 @@ function parseSSEEvent(event: string): StreamChunk[] {
     try {
       const parsed = JSON.parse(data) as {
         choices?: {
-          delta?: { content?: string; reasoning_content?: string };
+          delta?: { content?: string; reasoning_content?: string; reasoning?: string; thinking?: string };
         }[];
       };
       const delta = parsed?.choices?.[0]?.delta;
@@ -106,8 +106,8 @@ function parseSSEEvent(event: string): StreamChunk[] {
 
       // 顺序固定为先思维链后正文：同一 delta 里两者同时到达时，
       // 思维链在语义上总是先于正文，与 R1 的实际输出顺序一致。
-      if (delta.reasoning_content) {
-        chunks.push({ type: 'reasoning', text: delta.reasoning_content });
+      if ((delta.reasoning_content || delta.reasoning || delta.thinking)) {
+        chunks.push({ type: 'reasoning', text: (delta.reasoning_content || delta.reasoning || delta.thinking || '') });
       }
       if (delta.content) {
         chunks.push({ type: 'content', text: delta.content });
@@ -247,12 +247,14 @@ export const apiClient = {
       temperature: config.temperature,
       stream: !!onChunk,
       ...reasoningParams,
+    ...(config.model.toLowerCase().includes('agnes') ? { enable_thinking: true } : {}),
     };
 
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
         Authorization: `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify(body),
@@ -273,7 +275,7 @@ export const apiClient = {
 
     const data = (await response.json()) as {
       choices?: {
-        message?: { content?: string; reasoning_content?: string };
+        message?: { content?: string; reasoning_content?: string; reasoning?: string; thinking?: string };
       }[];
     };
     // 非流式分支没有 onChunk 通道回传思维链，返回值保持「正文」语义不变。
