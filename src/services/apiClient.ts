@@ -3,6 +3,22 @@ import { API_ENDPOINTS, REASONING_PROVIDERS } from '../constants';
 import type { APIConfig, ReasoningEffort, ReasoningProvider } from '../types/api';
 import type { Message } from '../types/message';
 
+/**
+ * 归一化 baseUrl：去掉首尾空白与**尾部所有斜杠**，并把结尾的 `/v1` 截掉。
+ *
+ * 之后调用方统一拼 `normalizeBaseUrl(baseUrl) + '/v1' + API_ENDPOINTS.XXX`，
+ * 于是 `https://api.openai.com`、`https://api.openai.com/`、
+ * `https://api.openai.com/v1`、`https://api.openai.com/v1/` 四种写法
+ * 都会得到同一个 `https://api.openai.com/v1/chat/completions`，彻底消灭 /v1/v1。
+ */
+export function normalizeBaseUrl(url: string): string {
+  let clean = url.trim().replace(/\/+$/, ''); // 去掉尾部所有斜杠
+  if (clean.endsWith('/v1')) {
+    clean = clean.slice(0, -3); // 截掉 /v1
+  }
+  return clean;
+}
+
 const DEFAULT_MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 10000;
@@ -229,8 +245,8 @@ export const apiClient = {
     abortSignal?: AbortSignal,
     options?: { reasoningEffort?: ReasoningEffort }
   ): Promise<string> {
-    // 去掉 baseUrl 末尾斜杠后拼接，不替用户补 /v1（用户可能已经自带）
-    const url = config.baseUrl.replace(/\/+$/, '') + API_ENDPOINTS.CHAT_COMPLETIONS;
+    // baseUrl 先归一化（去尾斜杠 + 去尾 /v1），再统一拼 /v1，避免用户自带 /v1 时出现 /v1/v1
+    const url = normalizeBaseUrl(config.baseUrl) + "/v1" + API_ENDPOINTS.CHAT_COMPLETIONS;
 
     // 思考强度参数按 model 推断厂商后再 merge；unknown/关闭时为 {}，不影响原有字段
     // 取值优先用调用方显式传的 options，其次用 config 里的字段（两条路径都支持）

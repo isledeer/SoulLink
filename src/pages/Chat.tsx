@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../stores/useChatStore';
 import { useSaveStore, FREE_CHAT_SAVE_NAME } from '../stores/useSaveStore';
 import { useCharacterStore } from '../stores/useCharacterStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { ChatInput } from '../components/chat/ChatInput';
 import { SaveManager } from '../components/SaveManager';
@@ -71,7 +72,18 @@ export default function Chat() {
 
   const [showSaves, setShowSaves] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [showModelMenu, setShowModelMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 顶栏模型切换：当前模型名与可选列表都来自 settings store
+  const modelName = useSettingsStore((s) => s.modelName);
+  const setStoreModelName = useSettingsStore((s) => s.setModelName);
+  const availableModels = useSettingsStore((s) => s.availableModels);
+
+  const handlePickModel = (m: string) => {
+    setStoreModelName(m);
+    setShowModelMenu(false);
+  };
 
   // 把当前角色告诉 chatStore：sendMessage 注入 system prompt 时要用。
   // 自由对话传 null，chatStore 据此注入 isledeer 的默认人格。
@@ -190,6 +202,14 @@ export default function Chat() {
 
   return (
     <div className="flex flex-col h-screen bg-surface-0 dark:bg-surface-900">
+      {/* 点击下拉框外部关闭：透明遮罩层级 z-40，位于下拉菜单（z-50）之下 */}
+      {showModelMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowModelMenu(false)}
+        />
+      )}
+
       <header className="flex items-center gap-2 p-3 border-b border-surface-200 dark:border-surface-700">
         <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
           ← 返回
@@ -197,6 +217,53 @@ export default function Chat() {
         <h1 className="flex-1 font-semibold truncate text-text-primary dark:text-surface-100">
           {displayName}
         </h1>
+
+        {/* 模型切换：点击展开下拉，选项来自 settings store 的 availableModels */}
+        <div className="relative z-50">
+          <button
+            type="button"
+            onClick={() => setShowModelMenu((v) => !v)}
+            title={modelName}
+            className="flex items-center gap-1 max-w-[10rem] text-xs text-text-secondary
+                       px-2 py-1 rounded border border-surface-300 dark:border-surface-700
+                       hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+          >
+            <span className="truncate">{modelName || '未设置模型'}</span>
+            <span aria-hidden="true">▼</span>
+          </button>
+
+          {showModelMenu && (
+            <div
+              className="absolute right-0 top-full mt-1 w-56 max-h-64 overflow-y-auto
+                         rounded-lg shadow-lg z-50
+                         bg-surface-100 dark:bg-surface-800
+                         border border-surface-200 dark:border-surface-700"
+            >
+              {availableModels.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-text-secondary dark:text-surface-300">
+                  暂无模型，请到设置页点「拉取模型」
+                </div>
+              ) : (
+                availableModels.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => handlePickModel(m)}
+                    className={[
+                      'block w-full text-left px-3 py-2 text-xs truncate transition-colors',
+                      m === modelName
+                        ? 'bg-primary-600 text-white'
+                        : 'text-text-primary dark:text-surface-100 hover:bg-surface-200 dark:hover:bg-surface-700',
+                    ].join(' ')}
+                  >
+                    {m}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="text-xs text-text-secondary px-2">
           {affinity} · {levelLabel}
         </div>

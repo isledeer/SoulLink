@@ -1,8 +1,13 @@
 import type { ReasoningProvider } from '../types/api';
 
+/**
+ * 端点常量只存**纯路径**（不带 /v1）。
+ * /v1 前缀统一由 normalizeBaseUrl(baseUrl) + '/v1' 拼接，
+ * 这样用户填 `https://api.openai.com` 或 `https://api.openai.com/v1` 都不会出现 /v1/v1。
+ */
 export const API_ENDPOINTS = {
-  CHAT_COMPLETIONS: '/v1/chat/completions',
-  MODELS: '/v1/models',
+  CHAT_COMPLETIONS: '/chat/completions',
+  MODELS: '/models',
 } as const;
 
 export const STORAGE_KEYS = {
