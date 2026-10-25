@@ -27,38 +27,36 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
-    - name: Build web assets
+    - name: Build Web Assets
       run: pnpm run build
 
-    - name: Set up JDK 21
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: '17'
         distribution: 'temurin'
         cache: gradle
 
-    - name: Add Capacitor Android Platform
-      run: npx cap add android
-
-    - name: Sync web assets to Android
-      run: npx cap sync android
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
     - name: Grant execute permission for gradlew
-      run: chmod +x android/gradlew
+      working-directory: ./native
+      run: chmod +x gradlew
 
-    - name: Build Android Debug APK
-      working-directory: ./android
+    - name: Build Android APK
+      working-directory: ./native
       run: ./gradlew assembleDebug
 
     - name: Upload APK as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: SoulLink-Debug-APK
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        name: SoulLink-Native-APK
+        path: native/app/build/outputs/apk/debug/app-debug.apk
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: build-${{ github.run_number }}
-        files: android/app/build/outputs/apk/debug/app-debug.apk
+        tag_name: native-build-${{ github.run_number }}
+        files: native/app/build/outputs/apk/debug/app-debug.apk
