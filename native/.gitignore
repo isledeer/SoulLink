@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+app/build/
+.idea/
+*.iml
+captures/
+.cxx/
+
+# assets 由 ./gradlew syncDist 从 ../dist 生成，是否纳入版本库自定
+# app/src/main/assets/

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoulLink Native</title>
+  <style>
+    body {
+      margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif;
+    }
+    main { max-width: 30rem; padding: 2rem; text-align: center; }
+    h1 { font-size: 1.2rem; margin-bottom: .75rem; }
+    p { color: #94a3b8; line-height: 1.8; font-size: .95rem; }
+    code { background: #1e293b; padding: .15rem .4rem; border-radius: .25rem; font-size: .85em; }
+    #ping { color: #f43f5e; min-height: 1.4em; font-size: .85rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>SoulLink · 原生外壳</h1>
+  <p>这是占位页：React 内核（dist）还没同步进 <code>app/src/main/assets/</code>。</p>
+  <p>执行 <code>./gradlew syncDist</code>（或直接 assembleDebug 自动同步）后重新打包，
+     这里就会变成真正的 SoulLink 界面。</p>
+  <p id="ping"></p>
+</main>
+<script>
+  // ------- 双向桥自检 -------
+  // Kotlin → JS：外壳的 PING 按钮会调 onNativePing
+  window.SoulLink = {
+    receiveChunk: function (id, chunk) { console.log('[native chunk]', id, chunk); },
+    receiveDone: function (id) { console.log('[native done]', id); },
+    receiveError: function (id, msg) { console.error('[native error]', id, msg); },
+    onNativePing: function (msg) {
+      document.getElementById('ping').textContent = '✅ 收到 Kotlin ping: ' + msg;
+      return 'pong';
+    }
+  };
+
+  // JS → Kotlin：标题与平台信息
+  try {
+    window.SoulLinkNative.setTitle('SoulLink · 原生外壳');
+    console.log('[platform]', window.SoulLinkNative.getPlatformInfo());
+  } catch (e) {
+    console.error('桥不可用', e);
+  }
+</script>
+</body>
+</html>
