@@ -117,8 +117,10 @@ class MainActivity : ComponentActivity() {
             settings.allowContentAccess = false
 
             // 桥：JS 调 window.SoulLinkNative.*，Kotlin 反向走 evaluateJavascript
+            // 注意：apply 里隐式接收者是 WebView，它自带只读的 getTitle()，
+            // 直接写 title = ... 会撞上那个 val，必须用 this@MainActivity 限定。
             addJavascriptInterface(
-                WebAppInterface(this) { newTitle -> title = newTitle },
+                WebAppInterface(this) { newTitle -> this@MainActivity.title = newTitle },
                 JS_BRIDGE_NAME
             )
 
