@@ -209,6 +209,8 @@ export interface SystemPromptCharacter {
     personality?: string;
     scenario?: string;
     system_prompt?: string;
+    mes_example?: string;
+    post_history_instructions?: string;
   };
 }
 
@@ -224,8 +226,8 @@ export function buildSystemPrompt(
   character: SystemPromptCharacter,
   gameState: GameState
 ): string {
-  const { name, description, personality, scenario, system_prompt } =
-    character.data;
+  const { name, description, personality, scenario, system_prompt,
+    mes_example, post_history_instructions } = character.data;
 
   let prompt = '【角色设定】\n';
   if (name) prompt += `名称：${name}\n`;
@@ -233,6 +235,9 @@ export function buildSystemPrompt(
   if (personality) prompt += `性格：${personality}\n`;
   if (scenario) prompt += `场景设定：${scenario}\n`;
   if (system_prompt) prompt += `${system_prompt}\n`;
+  if (post_history_instructions) prompt += `\n${post_history_instructions}\n`;
+  if (mes_example)
+    prompt += `\n【示例对话】（严格模仿其中的语气、句式与用词习惯）\n${mes_example}\n`;
 
   const level = getAffectionLevel(gameState.affinity);
   const inventoryText =
