@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -331,5 +334,33 @@ private fun SettingsInput(
             unfocusedIndicatorColor = Color(0x1FFFFFFF),
         ),
         modifier = modifier,
+    )
+}
+
+
+/**
+ * 设置页接线层：Koin 取 ViewModel，状态透传给纯 UI 的 SettingsScreen。
+ * 放在这里而不是 SoulLinkApp 里，让路由文件只做导航。
+ */
+@Composable
+fun SettingsRoute(onBack: () -> Unit) {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val testingId by viewModel.testing.collectAsStateWithLifecycle()
+    val testResult by viewModel.testResult.collectAsStateWithLifecycle()
+
+    SettingsScreen(
+        state = state,
+        testingProviderId = testingId,
+        testResult = testResult,
+        onAddProvider = viewModel::addProvider,
+        onUpdateProvider = viewModel::updateProvider,
+        onRemoveProvider = viewModel::removeProvider,
+        onSetBinding = { feature, providerId, model ->
+            viewModel.setBinding(feature, providerId, model)
+        },
+        onTest = viewModel::test,
+        onSave = viewModel::save,
+        onBack = onBack,
     )
 }

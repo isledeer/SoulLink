@@ -12,7 +12,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -229,10 +228,6 @@ fun AssistantDetailScreen(
                                         if (checked) list.add(id) else list.remove(id)
                                         draft = draft.copy(localTools = toJsonArray(list))
                                     },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = GlassTokens.Primary,
-                                    ),
                                 )
                             },
                         )
@@ -250,10 +245,6 @@ fun AssistantDetailScreen(
                             Switch(
                                 checked = draft.enableMemory,
                                 onCheckedChange = { draft = draft.copy(enableMemory = it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = GlassTokens.Primary,
-                                ),
                             )
                         },
                     )

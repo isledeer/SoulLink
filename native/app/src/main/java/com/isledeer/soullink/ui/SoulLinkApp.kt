@@ -2,7 +2,6 @@ package com.isledeer.soullink.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
@@ -13,6 +12,7 @@ import androidx.navigation.navArgument
 import com.isledeer.soullink.ui.assistant.AssistantDetailScreen
 import com.isledeer.soullink.ui.assistant.AssistantListScreen
 import com.isledeer.soullink.ui.assistant.AssistantViewModel
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 object Routes {
