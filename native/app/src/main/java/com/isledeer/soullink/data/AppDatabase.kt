@@ -6,15 +6,21 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ConversationEntity::class, MessageEntity::class],
-    // v2：新增会话表；messages 增加多模态与统计字段
-    version = 2,
+    entities = [
+        AssistantEntity::class,
+        ConversationEntity::class,
+        MessageNodeEntity::class,
+        UIMessageEntity::class,
+    ],
+    // v3：多智能体 + 消息树。破坏性迁移，旧数据清空。
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
 
+    abstract fun assistantDao(): AssistantDao
     abstract fun conversationDao(): ConversationDao
-    abstract fun messageDao(): MessageDao
+    abstract fun messageTreeDao(): MessageTreeDao
 
     companion object {
         @Volatile
@@ -27,7 +33,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "soullink.db",
                 )
-                    // 仍在早期迭代，结构变就直接重建；有真实用户数据前不写 Migration
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }

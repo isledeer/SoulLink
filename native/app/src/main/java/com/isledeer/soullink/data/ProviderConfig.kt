@@ -23,26 +23,26 @@ data class FeatureBinding(
 )
 
 /**
- * 全局设置：Provider 列表 + 功能绑定。
- *
- * 刻意存在 DataStore 里（单条 JSON），而不是 Room：
- * 这是配置不是业务数据，量小、整块读写，改起来不用动表结构。
+ * 全局设置。`default*` 是整条配置链的最后一层兜底：
+ *   全局默认 < 助手配置 < 对话覆盖
  */
 data class AppSettings(
     val providers: List<ProviderConfig> = emptyList(),
     val bindings: Map<Feature, FeatureBinding> = emptyMap(),
+    val defaultModel: String = "gpt-4o-mini",
+    val defaultTemperature: Double = 0.8,
+    val defaultTopP: Double = 1.0,
+    val defaultMaxTokens: Int = 2048,
 ) {
     fun providerFor(feature: Feature): ProviderConfig? {
-        val binding = bindings[feature]
-            ?: bindings[Feature.CHAT]
-            ?: return providers.firstOrNull()
+        val binding = bindings[feature] ?: bindings[Feature.CHAT] ?: return providers.firstOrNull()
         return providers.firstOrNull { it.id == binding.providerId } ?: providers.firstOrNull()
     }
 
     fun modelFor(feature: Feature): String =
         bindings[feature]?.model?.takeIf { it.isNotBlank() }
             ?: bindings[Feature.CHAT]?.model?.takeIf { it.isNotBlank() }
-            ?: "gpt-4o-mini"
+            ?: defaultModel
 
     val isConfigured: Boolean
         get() = providers.any { it.baseUrl.isNotBlank() && it.apiKey.isNotBlank() }
@@ -63,15 +63,17 @@ data class AppSettings(
         bindings.forEach { (feature, binding) ->
             bindingObject.put(
                 feature.name,
-                JSONObject()
-                    .put("providerId", binding.providerId)
-                    .put("model", binding.model)
+                JSONObject().put("providerId", binding.providerId).put("model", binding.model)
             )
         }
 
         return JSONObject()
             .put("providers", providerArray)
             .put("bindings", bindingObject)
+            .put("defaultModel", defaultModel)
+            .put("defaultTemperature", defaultTemperature)
+            .put("defaultTopP", defaultTopP)
+            .put("defaultMaxTokens", defaultMaxTokens)
             .toString()
     }
 
@@ -82,8 +84,7 @@ data class AppSettings(
                 val root = JSONObject(raw)
 
                 val providers = mutableListOf<ProviderConfig>()
-                val array = root.optJSONArray("providers")
-                if (array != null) {
+                root.optJSONArray("providers")?.let { array ->
                     for (i in 0 until array.length()) {
                         val obj = array.optJSONObject(i) ?: continue
                         providers.add(
@@ -98,8 +99,7 @@ data class AppSettings(
                 }
 
                 val bindings = mutableMapOf<Feature, FeatureBinding>()
-                val bindingObj = root.optJSONObject("bindings")
-                if (bindingObj != null) {
+                root.optJSONObject("bindings")?.let { bindingObj ->
                     Feature.entries.forEach { feature ->
                         val obj = bindingObj.optJSONObject(feature.name) ?: return@forEach
                         bindings[feature] = FeatureBinding(
@@ -109,7 +109,14 @@ data class AppSettings(
                     }
                 }
 
-                AppSettings(providers = providers, bindings = bindings)
+                AppSettings(
+                    providers = providers,
+                    bindings = bindings,
+                    defaultModel = root.optString("defaultModel", "gpt-4o-mini"),
+                    defaultTemperature = root.optDouble("defaultTemperature", 0.8),
+                    defaultTopP = root.optDouble("defaultTopP", 1.0),
+                    defaultMaxTokens = root.optInt("defaultMaxTokens", 2048),
+                )
             }.getOrElse { AppSettings() }
         }
     }

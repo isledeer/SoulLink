@@ -39,6 +39,12 @@ data class ChatRequest(
     val systemPrompt: String = "",
     val maxTokens: Int = 2048,
     val temperature: Double = 0.8,
+    val topP: Double = 1.0,
+    /** 助手启用的工具 schema（已组装成 {"type":"function","function":{...}}） */
+    val toolSchemas: List<JSONObject> = emptyList(),
+    /** 助手自定义请求头 / 请求体字段 */
+    val extraHeaders: Map<String, String> = emptyMap(),
+    val extraBody: Map<String, String> = emptyMap(),
     /** 请求 usage 统计（部分网关不认识该字段，VM 侧会降级重试） */
     val includeUsage: Boolean = true,
 )
@@ -189,16 +195,37 @@ class SseClient(
             .put("stream", true)
             .put("max_tokens", req.maxTokens)
             .put("temperature", req.temperature)
+            .put("top_p", req.topP)
 
         if (req.includeUsage) {
             body.put("stream_options", JSONObject().put("include_usage", true))
         }
 
-        return Request.Builder()
+        if (req.toolSchemas.isNotEmpty()) {
+            val toolArray = JSONArray()
+            req.toolSchemas.forEach { toolArray.put(it) }
+            body.put("tools", toolArray)
+        }
+
+        // 助手自定义请求体：能解析成 JSON 的按 JSON 放，否则当字符串
+        req.extraBody.forEach { (key, value) ->
+            if (value.isBlank()) return@forEach
+            val parsed = runCatching { JSONObject(value) }.getOrNull()
+                ?: runCatching { JSONArray(value) }.getOrNull()
+            body.put(key, parsed ?: value)
+        }
+
+        val builder = Request.Builder()
             .url(chatCompletionsUrl(req.baseUrl))
             .addHeader("Content-Type", "application/json")
             .addHeader("Accept", "text/event-stream")
             .addHeader("Authorization", "Bearer ${req.apiKey}")
+
+        req.extraHeaders.forEach { (key, value) ->
+            if (key.isNotBlank() && value.isNotBlank()) builder.addHeader(key, value)
+        }
+
+        return builder
             .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
     }

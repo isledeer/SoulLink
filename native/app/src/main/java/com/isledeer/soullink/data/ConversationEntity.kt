@@ -9,21 +9,24 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 会话（= 存档位）。
- *
- * systemPrompt / maxTokens / temperature 放在会话上而不是全局：
- * 需求里明确要求「当前对话专属」的 System Prompt 与采样参数。
+ * 会话（存档位）。v3 起必须绑定 assistantId：每次新建对话都关联一个助手。
+ * systemPrompt / maxTokens / temperature 是「对话级覆盖」，优先级最高。
  */
 @Entity(tableName = "conversations")
 data class ConversationEntity(
     @PrimaryKey val id: String,
     val title: String,
+    val assistantId: String = AssistantEntity.DEFAULT_ID,
     val systemPrompt: String = "",
-    val maxTokens: Int = 2048,
-    val temperature: Double = 0.8,
+    val maxTokens: Int = 0,
+    val temperature: Double = -1.0,
     val createdAt: Long,
     val updatedAt: Long,
-)
+) {
+    /** 0 / 负数 = 未覆盖，回落到助手或全局默认 */
+    val hasMaxTokensOverride: Boolean get() = maxTokens > 0
+    val hasTemperatureOverride: Boolean get() = temperature >= 0.0
+}
 
 @Dao
 interface ConversationDao {

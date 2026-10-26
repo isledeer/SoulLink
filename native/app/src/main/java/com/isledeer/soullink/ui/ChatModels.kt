@@ -1,8 +1,7 @@
 package com.isledeer.soullink.ui
 
 /**
- * UI 层模型（与 Room 实体解耦）。
- * reasoning 独立字段：思维链不进正文渲染；generationSpeed/tokenCount 供极客统计展示。
+ * UI 层模型。nodeId / variant* 支撑消息树的「多版本切换」。
  */
 enum class Role(val apiName: String) {
     User("user"),
@@ -16,6 +15,7 @@ enum class Role(val apiName: String) {
 
 data class ChatMessage(
     val id: String,
+    val nodeId: String,
     val role: Role,
     val text: String,
     val reasoning: String? = null,
@@ -23,19 +23,21 @@ data class ChatMessage(
     val isStreaming: Boolean = false,
     val isError: Boolean = false,
     val isFavorite: Boolean = false,
-    /** tok/s，仅 assistant 消息有值 */
     val generationSpeed: Double = 0.0,
-    /** 该条回复消耗的 token（取 usage，缺失时估算） */
     val tokenCount: Int = 0,
+    /** 同一节点下的变体总数与当前下标（>1 时 UI 显示 [< 1/N >]） */
+    val variantCount: Int = 1,
+    val variantIndex: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
 )
 
 data class Conversation(
     val id: String,
     val title: String,
+    val assistantId: String,
     val systemPrompt: String = "",
-    val maxTokens: Int = 2048,
-    val temperature: Double = 0.8,
+    val maxTokens: Int = 0,
+    val temperature: Double = -1.0,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
 )
