@@ -26,13 +26,15 @@ fun ChatRoute(
     val searchMaster by viewModel.searchMaster.collectAsStateWithLifecycle()
     val searchEngines by viewModel.searchEngines.collectAsStateWithLifecycle()
     val isSearchEnabled by viewModel.isSearchEnabled.collectAsStateWithLifecycle()
+    val thinkingLevel by viewModel.thinkingLevel.collectAsStateWithLifecycle()
+    val currentModelName by viewModel.currentModelName.collectAsStateWithLifecycle()
 
     ChatScreen(
         conversations = conversations,
         current = current,
         messages = messages,
         isGenerating = isGenerating,
-        modelName = settings.modelFor(Feature.CHAT),
+        modelName = currentModelName ?: "未选择模型",
         onSelectConversation = viewModel::selectConversation,
         onNewConversation = viewModel::newConversation,
         onDeleteConversation = viewModel::deleteConversation,
@@ -46,6 +48,8 @@ fun ChatRoute(
         onToggleAutoCompress = viewModel::toggleAutoCompress,
         onContinueGeneration = viewModel::continueGeneration,
         onClearContext = viewModel::clearContext,
+        thinkingLevel = thinkingLevel,
+        onThinkingLevelChange = viewModel::setThinkingLevel,
         toolStates = mapOf(
             "time" to (currentAssistant?.toolList()?.contains("time") == true),
             "clipboard" to (currentAssistant?.toolList()?.contains("clipboard") == true),

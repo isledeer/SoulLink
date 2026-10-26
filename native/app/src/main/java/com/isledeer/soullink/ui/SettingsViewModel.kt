@@ -39,15 +39,10 @@ class SettingsViewModel(
     private val _balanceText = MutableStateFlow<String?>(null)
     val balanceText: StateFlow<String?> = _balanceText.asStateFlow()
 
-    private var loaded = false
-
     init {
         viewModelScope.launch {
             repository.flow.collect { stored ->
-                if (!loaded) {
-                    _state.value = stored
-                    loaded = true
-                }
+                _state.value = stored
             }
         }
     }
@@ -88,10 +83,7 @@ class SettingsViewModel(
     }
 
     fun save() {
-        viewModelScope.launch {
-            repository.save(_state.value)
-            loaded = true
-        }
+        viewModelScope.launch { repository.save(_state.value) }
     }
 
     /** 从 JSON 文本导入配置（对应二维码/文本分享） */
@@ -104,7 +96,6 @@ class SettingsViewModel(
         _state.value = parsed
         viewModelScope.launch {
             repository.save(parsed)
-            loaded = true
             _testResult.value = "已导入 ${parsed.providers.size} 个提供商"
         }
     }

@@ -71,6 +71,8 @@ fun ChatScreen(
     onToggleAutoCompress: () -> Unit,
     onContinueGeneration: (String) -> Unit,
     onClearContext: () -> Unit,
+    thinkingLevel: String,
+    onThinkingLevelChange: (String) -> Unit,
     toolStates: Map<String, Boolean>,
     onToggleTool: (String) -> Unit,
     providers: List<ProviderConfig>,
@@ -101,7 +103,6 @@ fun ChatScreen(
     var settingsVisible by remember { mutableStateOf(false) }
     var actionsTarget by remember { mutableStateOf<ChatMessage?>(null) }
     var editTarget by remember { mutableStateOf<ChatMessage?>(null) }
-    var thinkingLevel by remember { mutableStateOf("OFF") }
     var toolsVisible by remember { mutableStateOf(false) }
     var modelPickerVisible by remember { mutableStateOf(false) }
     var searchSheetVisible by remember { mutableStateOf(false) }
@@ -273,8 +274,9 @@ fun ChatScreen(
                     value = input,
                     onValueChange = { input = it },
                     isGenerating = isGenerating,
+                    modelName = modelName,
                     thinkingLevel = thinkingLevel,
-                    onThinkingLevelChange = { thinkingLevel = it },
+                    onThinkingLevelChange = onThinkingLevelChange,
                     isWebSearchEnabled = isSearchEnabled,
                     onSearchClick = { searchSheetVisible = true },
                     onModelClick = { modelPickerVisible = true },

@@ -56,7 +56,6 @@ fun SettingsScreen(
     onFetchModels: (ProviderConfig) -> Unit,
     onQueryBalance: (ProviderConfig) -> Unit,
     onImportConfig: (String) -> Unit,
-    onSearchKey: (String, String) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -175,20 +174,6 @@ fun SettingsScreen(
                         onSetBinding = onSetBinding,
                         onOpenPicker = { pickerFeature = feature },
                     )
-                }
-
-                Spacer(Modifier.height(20.dp))
-                SectionTitle("联网搜索 Key")
-                CardGroup(title = "联网搜索 Key") {
-                    listOf("bing" to "必应", "bocha" to "博查", "tavily" to "Tavily", "exa" to "Exa").forEach { (id, label) ->
-                        CardGroupItem {
-                            SettingsInput(
-                                value = state.searchKeys[id].orEmpty(),
-                                placeholder = "$label API Key（留空则该引擎不可用）",
-                                onValueChange = { onSearchKey(id, it) },
-                            )
-                        }
-                    }
                 }
 
                 Spacer(Modifier.height(20.dp))
@@ -598,7 +583,6 @@ fun SettingsRoute(onBack: () -> Unit) {
         onFetchModels = viewModel::fetchModelList,
         onQueryBalance = viewModel::queryBalance,
         onImportConfig = viewModel::importConfig,
-        onSearchKey = viewModel::setSearchKey,
         onSave = viewModel::save,
         onBack = onBack,
     )

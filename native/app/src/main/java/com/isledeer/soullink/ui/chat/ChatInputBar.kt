@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Public
@@ -53,6 +54,7 @@ fun ChatInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     isGenerating: Boolean,
+    modelName: String,
     thinkingLevel: String,
     onThinkingLevelChange: (String) -> Unit,
     isWebSearchEnabled: Boolean,
@@ -118,7 +120,7 @@ fun ChatInputBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onModelClick) {
-                Icon(Icons.Outlined.Memory, contentDescription = "模型", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp))
+                BrandIcon(modelName = modelName, size = 20.dp)
             }
 
             IconButton(onClick = onSearchClick) {
@@ -131,21 +133,19 @@ fun ChatInputBar(
             }
 
             Box {
-                Text(
-                    text = thinkingLevel,
-                    color = if (thinkingLevel == "OFF") GlassTokens.TextSecondary else MaterialTheme.colorScheme.primary,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .clickable { thinkingMenu = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                )
-                ThinkingPopup(
+                IconButton(onClick = { thinkingMenu = !thinkingMenu }) {
+                    Icon(
+                        Icons.Outlined.Lightbulb,
+                        contentDescription = "思考深度",
+                        tint = if (thinkingLevel == "OFF") GlassTokens.TextSecondary else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                ThinkingSliderPopup(
                     expanded = thinkingMenu,
                     onDismiss = { thinkingMenu = false },
                     current = thinkingLevel,
-                    onPick = { level -> onThinkingLevelChange(level); thinkingMenu = false },
+                    onPick = onThinkingLevelChange,
                 )
             }
 
@@ -196,42 +196,6 @@ fun ChatInputBar(
                 } else {
                     Text("↑", color = if (canSend) Color.White else Color(0x66FFFFFF), fontSize = 18.sp)
                 }
-            }
-        }
-    }
-}
-
-/** 思考深度弹窗：5 档水平排列，选中项高亮 */
-@Composable
-fun ThinkingPopup(
-    expanded: Boolean,
-    onDismiss: () -> Unit,
-    current: String,
-    onPick: (String) -> Unit,
-) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismiss,
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xE61E1E1E)),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            THINKING_LEVELS.forEach { level ->
-                val selected = level == current
-                Text(
-                    text = level,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimary else Color(0xFFE5E7EB),
-                    fontSize = 10.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                        .clickable { onPick(level) }
-                        .padding(horizontal = 8.dp, vertical = 5.dp),
-                )
             }
         }
     }

@@ -75,6 +75,25 @@ class ChatViewModel(
     private val _tokenUsage = MutableStateFlow(0)
     val tokenUsage: StateFlow<Int> = _tokenUsage.asStateFlow()
 
+    private val _thinkingLevel = MutableStateFlow("OFF")
+    val thinkingLevel: StateFlow<String> = _thinkingLevel.asStateFlow()
+
+    /** 顶栏副标题：助手覆盖 > 全局绑定；空 = 未选择模型 */
+    private val _currentModelName = MutableStateFlow<String?>(null)
+    val currentModelName: StateFlow<String?> = _currentModelName.asStateFlow()
+
+    private fun refreshModelName() {
+        val assistant = _currentAssistant.value
+        val global = _settings.value.modelFor(Feature.CHAT)
+        _currentModelName.value = assistant?.chatModelId?.takeIf { it.isNotBlank() } ?: global.takeIf { it.isNotBlank() }
+    }
+
+    fun setThinkingLevel(level: String) {
+        if (level in listOf("OFF", "LOW", "MEDIUM", "HIGH", "XHIGH")) {
+            _thinkingLevel.value = level
+        }
+    }
+
     private val _autoCompress = MutableStateFlow(false)
     val autoCompress: StateFlow<Boolean> = _autoCompress.asStateFlow()
 
@@ -110,6 +129,7 @@ class ChatViewModel(
         viewModelScope.launch {
             settingsRepository.flow.collect { settings ->
                 _settings.value = settings
+                refreshModelName()
                 val provider = settings.providerFor(Feature.CHAT)
                 tools.imageGenerator = if (provider != null && provider.baseUrl.isNotBlank()) {
                     { prompt -> runBlocking { sse.generateImage(provider.baseUrl, provider.apiKey, prompt) } }
@@ -140,6 +160,7 @@ class ChatViewModel(
         _current.value = list.first().toUi()
         _currentAssistant.value = assistantDao.findById(list.first().assistantId)
             ?: _assistants.value.firstOrNull()
+        refreshModelName()
         reloadMessages(list.first().id)
     }
 
@@ -165,6 +186,7 @@ class ChatViewModel(
             _current.value = entity.toUi()
             _currentAssistant.value = assistantDao.findById(entity.assistantId)
                 ?: _assistants.value.firstOrNull()
+            refreshModelName()
             reloadMessages(id)
         }
     }
@@ -367,6 +389,7 @@ class ChatViewModel(
         val assistant = _currentAssistant.value ?: return
         val updated = assistant.copy(chatModelId = model, updatedAt = System.currentTimeMillis())
         _currentAssistant.value = updated
+        refreshModelName()
         viewModelScope.launch { assistantDao.upsert(updated) }
     }
 

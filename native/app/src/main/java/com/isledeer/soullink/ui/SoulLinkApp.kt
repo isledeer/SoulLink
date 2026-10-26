@@ -12,6 +12,8 @@ import androidx.navigation.navArgument
 import com.isledeer.soullink.ui.assistant.AssistantDetailScreen
 import com.isledeer.soullink.ui.assistant.AssistantListScreen
 import com.isledeer.soullink.ui.assistant.AssistantViewModel
+import com.isledeer.soullink.ui.settings.SearchServiceScreen
+import com.isledeer.soullink.ui.settings.SettingsOverviewScreen
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
@@ -21,6 +23,8 @@ object Routes {
     const val WORLD_BOOK = "worldbook"
     const val ASSISTANTS = "assistants"
     const val ASSISTANT_DETAIL = "assistant/{id}"
+    const val PROVIDERS = "providers"
+    const val SEARCH_SERVICE = "search_service"
 
     fun assistantDetail(id: String) = "assistant/$id"
 }
@@ -42,7 +46,20 @@ fun SoulLinkApp() {
         }
 
         composable(Routes.SETTINGS) {
+            SettingsOverviewScreen(
+                onBack = { navController.popBackStack() },
+                onOpenAssistants = { navController.navigate(Routes.ASSISTANTS) },
+                onOpenProviders = { navController.navigate(Routes.PROVIDERS) },
+                onOpenSearchService = { navController.navigate(Routes.SEARCH_SERVICE) },
+            )
+        }
+
+        composable(Routes.PROVIDERS) {
             SettingsRoute(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.SEARCH_SERVICE) {
+            SearchServiceRoute(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.WORLD_BOOK) {
@@ -119,5 +136,18 @@ private fun AssistantDetailRoute(
             viewModel.update { updated }
             viewModel.save { onBack() }
         },
+    )
+}
+
+@Composable
+private fun SearchServiceRoute(onBack: () -> Unit) {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    SearchServiceScreen(
+        keys = state.searchKeys,
+        onChangeKey = viewModel::setSearchKey,
+        onSave = viewModel::save,
+        onBack = onBack,
     )
 }
