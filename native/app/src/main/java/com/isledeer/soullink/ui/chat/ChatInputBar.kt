@@ -56,7 +56,7 @@ fun ChatInputBar(
     thinkingLevel: String,
     onThinkingLevelChange: (String) -> Unit,
     isWebSearchEnabled: Boolean,
-    onToggleWebSearch: () -> Unit,
+    onSearchClick: () -> Unit,
     onModelClick: () -> Unit,
     onToolsClick: () -> Unit,
     onAttachClick: () -> Unit,
@@ -121,7 +121,7 @@ fun ChatInputBar(
                 Icon(Icons.Outlined.Memory, contentDescription = "模型", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp))
             }
 
-            IconButton(onClick = onToggleWebSearch) {
+            IconButton(onClick = onSearchClick) {
                 Icon(
                     Icons.Outlined.Public,
                     contentDescription = "联网搜索",

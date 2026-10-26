@@ -59,7 +59,7 @@ data class AssistantEntity(
         fun defaultAssistant(): AssistantEntity = AssistantEntity(
             id = DEFAULT_ID,
             name = "通用助手",
-            avatar = "🦌",
+            avatar = null,
             systemPrompt = "你是 SoulLink 的助手，回答准确、简洁、直接。",
             tags = "[\"通用\"]",
         )

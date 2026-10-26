@@ -34,7 +34,6 @@ import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.ui.chat.AttachBottomSheet
 import com.isledeer.soullink.ui.chat.ChatInputBar
 import com.isledeer.soullink.ui.chat.ToolsBottomSheet
-import com.isledeer.soullink.ui.chat.TopBarDropdownMenu
 import com.isledeer.soullink.ui.components.ModelPickerSheet
 import com.isledeer.soullink.util.DocumentParser
 import com.isledeer.soullink.util.ImageUtils
@@ -74,8 +73,13 @@ fun ChatScreen(
     toolStates: Map<String, Boolean>,
     onToggleTool: (String) -> Unit,
     providers: List<ProviderConfig>,
-    fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
     onPickChatModel: (String) -> Unit,
+    searchMaster: Boolean,
+    searchEngines: Map<String, Boolean>,
+    searchKeys: Map<String, String>,
+    isSearchEnabled: Boolean,
+    onSearchMasterChange: (Boolean) -> Unit,
+    onSearchEngineChange: (String, Boolean) -> Unit,
     onRegenerate: (String) -> Unit,
     onDeleteMessage: (String) -> Unit,
     onEditMessage: (String, String) -> Unit,
@@ -96,11 +100,10 @@ fun ChatScreen(
     var settingsVisible by remember { mutableStateOf(false) }
     var actionsTarget by remember { mutableStateOf<ChatMessage?>(null) }
     var editTarget by remember { mutableStateOf<ChatMessage?>(null) }
-    var consoleVisible by remember { mutableStateOf(false) }
     var thinkingLevel by remember { mutableStateOf("OFF") }
-    var webSearch by remember { mutableStateOf(false) }
     var toolsVisible by remember { mutableStateOf(false) }
     var modelPickerVisible by remember { mutableStateOf(false) }
+    var searchSheetVisible by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     val voice = remember { VoiceInput(context) }
@@ -220,7 +223,12 @@ fun ChatScreen(
                     title = current?.title ?: "SoulLink",
                     modelName = modelName,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
-                    onOpenMenu = { consoleVisible = true },
+                    tokenUsage = tokenUsage,
+                    autoCompress = autoCompress,
+                    onNewChat = onNewConversation,
+                    onClearContext = onClearContext,
+                    onOpenSettings = { settingsVisible = true },
+                    onToggleAutoCompress = onToggleAutoCompress,
                 )
 
                 LazyColumn(
@@ -265,8 +273,8 @@ fun ChatScreen(
                     isGenerating = isGenerating,
                     thinkingLevel = thinkingLevel,
                     onThinkingLevelChange = { thinkingLevel = it },
-                    isWebSearchEnabled = webSearch,
-                    onToggleWebSearch = { webSearch = !webSearch },
+                    isWebSearchEnabled = isSearchEnabled,
+                    onSearchClick = { searchSheetVisible = true },
                     onModelClick = { modelPickerVisible = true },
                     onToolsClick = { toolsVisible = true },
                     onAttachClick = { attachVisible = true },
@@ -354,16 +362,14 @@ fun ChatScreen(
         )
     }
 
-    if (consoleVisible) {
-        TopBarDropdownMenu(
-            expanded = true,
-            onDismiss = { consoleVisible = false },
-            tokenUsage = tokenUsage,
-            autoCompress = autoCompress,
-            onNewChat = onNewConversation,
-            onClearContext = onClearContext,
-            onOpenSettings = { settingsVisible = true },
-            onToggleAutoCompress = onToggleAutoCompress,
+    if (searchSheetVisible) {
+        com.isledeer.soullink.ui.chat.SearchEngineBottomSheet(
+            masterEnabled = searchMaster,
+            engineStates = searchEngines,
+            engineKeys = searchKeys,
+            onMasterChange = onSearchMasterChange,
+            onEngineChange = onSearchEngineChange,
+            onDismiss = { searchSheetVisible = false },
         )
     }
 
@@ -378,8 +384,7 @@ fun ChatScreen(
     if (modelPickerVisible) {
         ModelPickerSheet(
             providers = providers,
-            fetchModels = fetchModels,
-            onPick = { model ->
+            onPick = { _, model ->
                 onPickChatModel(model)
                 modelPickerVisible = false
             },
@@ -413,7 +418,7 @@ private fun PendingImagePreview(base64: String, onClear: () -> Unit) {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "✕ 移除",
+                text = "移除图片",
                 color = GlassTokens.Accent,
                 fontSize = 11.sp,
                 modifier = Modifier

@@ -22,6 +22,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -93,7 +97,7 @@ fun AssistantListScreen(
                         .clip(CircleShape)
                         .clickable(onClick = onCreate),
                     contentAlignment = Alignment.Center,
-                ) { Text("＋", color = GlassTokens.Primary, fontSize = 18.sp) }
+                ) { Icon(Icons.Outlined.Add, contentDescription = "新建助手", tint = GlassTokens.Primary, modifier = Modifier.size(20.dp)) }
             }
 
             Spacer(Modifier.height(10.dp))
@@ -139,7 +143,7 @@ fun AssistantListScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     EmphasizedText(
-                        text = if (assistants.isEmpty()) "还没有助手，点右上角 ＋ 新建" else "没有匹配的助手",
+                        text = if (assistants.isEmpty()) "还没有助手，点右上角加号新建" else "没有匹配的助手",
                         style = Emphasized.body,
                         color = GlassTokens.TextSecondary.copy(alpha = 0.7f),
                     )
@@ -196,7 +200,7 @@ private fun AssistantRow(
                         .clip(CircleShape)
                         .clickable { menu = true },
                     contentAlignment = Alignment.Center,
-                ) { Text("⋮", color = GlassTokens.TextSecondary, fontSize = 16.sp) }
+                ) { Icon(Icons.Outlined.MoreVert, contentDescription = "更多", tint = GlassTokens.TextSecondary, modifier = Modifier.size(18.dp)) }
 
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(

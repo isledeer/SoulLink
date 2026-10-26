@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MoveToInbox
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.DropdownMenu
@@ -52,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.MaterialTheme
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.util.DocumentParser
 import kotlinx.coroutines.Dispatchers
@@ -283,4 +285,69 @@ private fun SlashRow(
         },
         onClick = onClick,
     )
+}
+
+
+/* ------------------------- 联网搜索面板 ------------------------- */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchEngineBottomSheet(
+    masterEnabled: Boolean,
+    engineStates: Map<String, Boolean>,
+    engineKeys: Map<String, String>,
+    onMasterChange: (Boolean) -> Unit,
+    onEngineChange: (String, Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val engines = listOf("bing" to "必应", "bocha" to "博查", "tavily" to "Tavily", "exa" to "Exa")
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = GlassTokens.BackgroundBottom,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            SheetHandle()
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Public, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("启用联网搜索", color = GlassTokens.TextPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Switch(checked = masterEnabled, onCheckedChange = onMasterChange)
+            }
+
+            Spacer(Modifier.height(8.dp))
+            SheetSectionTitle("搜索引擎")
+
+            engines.forEach { (id, label) ->
+                val hasKey = engineKeys[id].orEmpty().isNotBlank()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(label, color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    if (!hasKey) {
+                        Text("需配置 Key", color = GlassTokens.TextSecondary.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(end = 8.dp))
+                    }
+                    Switch(
+                        checked = engineStates[id] == true,
+                        onCheckedChange = { onEngineChange(id, it) },
+                        enabled = hasKey,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
 }

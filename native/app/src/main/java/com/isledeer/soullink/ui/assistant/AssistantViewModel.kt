@@ -59,7 +59,7 @@ class AssistantViewModel(
         val entity = AssistantEntity(
             id = id,
             name = "新助手",
-            avatar = "✳️",
+            avatar = null,
             systemPrompt = "你是 SoulLink 的助手。",
         )
         viewModelScope.launch {

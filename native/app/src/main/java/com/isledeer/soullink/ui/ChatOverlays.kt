@@ -17,8 +17,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddComment
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Iconimport androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -44,14 +54,14 @@ import androidx.compose.ui.window.Dialog
 
 /* ----------------------------- 侧边抽屉 ----------------------------- */
 
-private data class DrawerEntry(val glyph: String, val label: String, val hint: String = "")
+private data class DrawerEntry(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String)
 
 private val CORE_ENTRIES = listOf(
-    DrawerEntry("👤", "角色"),
-    DrawerEntry("🤖", "助手"),
-    DrawerEntry("🔌", "MCP"),
-    DrawerEntry("📖", "故事书"),
-    DrawerEntry("🌊", "沉入世界"),
+    DrawerEntry(Icons.Outlined.Person, "角色"),
+    DrawerEntry(Icons.Outlined.SmartToy, "助手"),
+    DrawerEntry(Icons.Outlined.Hub, "MCP"),
+    DrawerEntry(Icons.Outlined.MenuBook, "故事书"),
+    DrawerEntry(Icons.Outlined.TravelExplore, "沉入世界"),
 )
 
 @Composable
@@ -103,8 +113,8 @@ fun DrawerContent(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("＋", color = GlassTokens.Primary, fontSize = 16.sp)
-            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Outlined.AddComment, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(16.dp))
             Text("新建聊天", color = GlassTokens.TextPrimary, fontSize = 14.sp)
         }
 
@@ -124,8 +134,8 @@ fun DrawerContent(
                     .padding(horizontal = 10.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(entry.glyph, fontSize = 14.sp)
-                Spacer(Modifier.width(10.dp))
+                Icon(entry.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(16.dp))
                 Text(entry.label, color = GlassTokens.TextPrimary, fontSize = 14.sp)
             }
         }
@@ -153,6 +163,8 @@ fun DrawerContent(
                         .padding(horizontal = 10.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(16.dp))
                     Text(
                         text = conversation.title,
                         color = if (active) GlassTokens.Primary else GlassTokens.TextPrimary,
@@ -161,14 +173,15 @@ fun DrawerContent(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Text(
-                        text = "✕",
-                        color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = "删除会话",
+                        tint = GlassTokens.TextSecondary.copy(alpha = 0.6f),
                         modifier = Modifier
+                            .size(18.dp)
                             .clip(CircleShape)
                             .clickable { onDeleteConversation(conversation.id) }
-                            .padding(6.dp),
+                            .padding(2.dp),
                     )
                 }
             }
@@ -182,8 +195,8 @@ fun DrawerContent(
                 .padding(horizontal = 10.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("⚙", fontSize = 14.sp)
-            Spacer(Modifier.width(10.dp))
+            Icon(Icons.Outlined.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(16.dp))
             Text("设置", color = GlassTokens.TextPrimary, fontSize = 14.sp)
         }
     }

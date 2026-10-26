@@ -76,6 +76,28 @@ class ChatViewModel(
     private val _autoCompress = MutableStateFlow(false)
     val autoCompress: StateFlow<Boolean> = _autoCompress.asStateFlow()
 
+    /** 联网搜索：总开关 + 四个引擎各自开关 */
+    private val _searchMaster = MutableStateFlow(false)
+    val searchMaster: StateFlow<Boolean> = _searchMaster.asStateFlow()
+
+    private val _searchEngines = MutableStateFlow(
+        mapOf("bing" to false, "bocha" to false, "tavily" to false, "exa" to false)
+    )
+    val searchEngines: StateFlow<Map<String, Boolean>> = _searchEngines.asStateFlow()
+
+    /** 地球图标高亮 = 总开关 && 至少一个引擎开 */
+    val isSearchEnabled: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
+        _searchMaster, _searchEngines
+    ) { master, engines -> master && engines.values.any { it } }.stateIn(
+        viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, false
+    )
+
+    fun setSearchMaster(enabled: Boolean) { _searchMaster.value = enabled }
+    fun setSearchEngine(id: String, enabled: Boolean) {
+        _searchEngines.value = _searchEngines.value + (id to enabled)
+    }
+    fun searchKeyFor(id: String): String = _settings.value.searchKeys[id].orEmpty()
+
     private var streamJob: Job? = null
     private var streamingId: String? = null
 

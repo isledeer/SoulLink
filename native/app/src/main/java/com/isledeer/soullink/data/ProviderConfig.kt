@@ -18,7 +18,11 @@ data class ProviderConfig(
     /** 余额查询端点（留空则不支持）；path 为点分 JSON 路径 */
     val balanceUrl: String = "",
     val balanceJsonPath: String = "",
-)
+    /** 用户勾选启用的模型（JSON 数组字符串，访问用 modelList()） */
+    val enabledModelsJson: String = "[]",
+) {
+    fun modelList(): List<String> = AssistantEntity.parseStringArray(enabledModelsJson)
+}
 
 data class FeatureBinding(
     val providerId: String,
@@ -36,6 +40,8 @@ data class AppSettings(
     val defaultTemperature: Double = 0.8,
     val defaultTopP: Double = 1.0,
     val defaultMaxTokens: Int = 2048,
+    /** 联网搜索引擎的 API Key（bing / bocha / tavily / exa） */
+    val searchKeys: Map<String, String> = emptyMap(),
 ) {
     fun providerFor(feature: Feature): ProviderConfig? {
         val binding = bindings[feature] ?: bindings[Feature.CHAT] ?: return providers.firstOrNull()
@@ -77,6 +83,7 @@ data class AppSettings(
             .put("defaultTemperature", defaultTemperature)
             .put("defaultTopP", defaultTopP)
             .put("defaultMaxTokens", defaultMaxTokens)
+            .put("searchKeys", JSONObject(searchKeys))
             .toString()
     }
 
@@ -98,6 +105,7 @@ data class AppSettings(
                                 apiKey = obj.optString("apiKey"),
                                 balanceUrl = obj.optString("balanceUrl"),
                                 balanceJsonPath = obj.optString("balanceJsonPath"),
+                                enabledModelsJson = obj.optString("enabledModelsJson", "[]"),
                             )
                         )
                     }
@@ -121,6 +129,9 @@ data class AppSettings(
                     defaultTemperature = root.optDouble("defaultTemperature", 0.8),
                     defaultTopP = root.optDouble("defaultTopP", 1.0),
                     defaultMaxTokens = root.optInt("defaultMaxTokens", 2048),
+                    searchKeys = root.optJSONObject("searchKeys")?.let { obj ->
+                        obj.keys().asSequence().associateWith { key -> obj.optString(key) }
+                    } ?: emptyMap(),
                 )
             }.getOrElse { AppSettings() }
         }

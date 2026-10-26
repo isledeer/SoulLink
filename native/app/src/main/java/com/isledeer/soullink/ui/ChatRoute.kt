@@ -23,6 +23,9 @@ fun ChatRoute(
     val autoCompress by viewModel.autoCompress.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val currentAssistant by viewModel.currentAssistant.collectAsStateWithLifecycle()
+    val searchMaster by viewModel.searchMaster.collectAsStateWithLifecycle()
+    val searchEngines by viewModel.searchEngines.collectAsStateWithLifecycle()
+    val isSearchEnabled by viewModel.isSearchEnabled.collectAsStateWithLifecycle()
 
     ChatScreen(
         conversations = conversations,
@@ -50,8 +53,13 @@ fun ChatRoute(
         ),
         onToggleTool = viewModel::toggleLocalTool,
         providers = settings.providers,
-        fetchModels = viewModel::fetchModelsForChat,
         onPickChatModel = viewModel::setAssistantModel,
+        searchMaster = searchMaster,
+        searchEngines = searchEngines,
+        searchKeys = settings.searchKeys,
+        isSearchEnabled = isSearchEnabled,
+        onSearchMasterChange = viewModel::setSearchMaster,
+        onSearchEngineChange = viewModel::setSearchEngine,
         onRegenerate = viewModel::regenerate,
         onDeleteMessage = viewModel::deleteMessage,
         onEditMessage = viewModel::editMessage,

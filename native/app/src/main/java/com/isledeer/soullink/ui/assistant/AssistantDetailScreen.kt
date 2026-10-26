@@ -50,7 +50,6 @@ private val PROMPT_VARIABLES = listOf("{{date}}", "{{time}}", "{{datetime}}", "{
 fun AssistantDetailScreen(
     assistant: AssistantEntity,
     providers: List<ProviderConfig>,
-    fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
     onBack: () -> Unit,
     onSave: (AssistantEntity) -> Unit,
 ) {
@@ -127,7 +126,7 @@ fun AssistantDetailScreen(
                                 Spacer(Modifier.height(6.dp))
                                 TextInput(
                                     value = draft.avatar.orEmpty(),
-                                    placeholder = "头像 emoji（如 🦌）",
+                                    placeholder = "头像 Emoji（可选）",
                                     onChange = { draft = draft.copy(avatar = it.ifBlank { null }) },
                                 )
                             }
@@ -329,8 +328,7 @@ fun AssistantDetailScreen(
         if (modelPickerVisible) {
             com.isledeer.soullink.ui.components.ModelPickerSheet(
                 providers = providers,
-                fetchModels = fetchModels,
-                onPick = { model -> draft = draft.copy(chatModelId = model); modelPickerVisible = false },
+                onPick = { _, model -> draft = draft.copy(chatModelId = model); modelPickerVisible = false },
                 onDismiss = { modelPickerVisible = false },
             )
         }

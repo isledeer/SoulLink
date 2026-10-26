@@ -114,7 +114,6 @@ private fun AssistantDetailRoute(
     AssistantDetailScreen(
         assistant = current,
         providers = appSettings.providers,
-        fetchModels = viewModel::fetchModels,
         onBack = onBack,
         onSave = { updated ->
             viewModel.update { updated }

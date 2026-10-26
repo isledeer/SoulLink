@@ -49,12 +49,12 @@ fun SettingsScreen(
     onRemoveProvider: (String) -> Unit,
     onSetBinding: (Feature, String, String) -> Unit,
     onTest: (ProviderConfig) -> Unit,
-    fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
     fetchedModels: Map<String, List<String>>,
     balanceText: String?,
     onFetchModels: (ProviderConfig) -> Unit,
     onQueryBalance: (ProviderConfig) -> Unit,
     onImportConfig: (String) -> Unit,
+    onSearchKey: (String, String) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -142,7 +142,7 @@ fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    Text("＋ 添加提供商", color = GlassTokens.Primary, fontSize = 13.sp)
+                    Text("添加提供商", color = GlassTokens.Primary, fontSize = 13.sp)
                 }
 
                 balanceText?.let { text ->
@@ -173,6 +173,20 @@ fun SettingsScreen(
                         onSetBinding = onSetBinding,
                         onOpenPicker = { pickerFeature = feature },
                     )
+                }
+
+                Spacer(Modifier.height(20.dp))
+                SectionTitle("联网搜索 Key")
+                CardGroup(title = "联网搜索 Key") {
+                    listOf("bing" to "必应", "bocha" to "博查", "tavily" to "Tavily", "exa" to "Exa").forEach { (id, label) ->
+                        CardGroupItem {
+                            SettingsInput(
+                                value = state.searchKeys[id].orEmpty(),
+                                placeholder = "$label API Key（留空则该引擎不可用）",
+                                onValueChange = { onSearchKey(id, it) },
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(20.dp))
@@ -287,14 +301,8 @@ fun SettingsScreen(
             val currentBinding = state.bindings[feature]
             com.isledeer.soullink.ui.components.ModelPickerSheet(
                 providers = state.providers,
-                fetchModels = fetchModels,
-                onProviderPicked = { provider ->
-                    onSetBinding(feature, provider.id, currentBinding?.model.orEmpty())
-                },
-                onPick = { model ->
-                    val providerId = state.bindings[feature]?.providerId
-                        ?: state.providers.firstOrNull()?.id.orEmpty()
-                    onSetBinding(feature, providerId, model)
+                onPick = { provider, model ->
+                    onSetBinding(feature, provider.id, model)
                     pickerFeature = null
                 },
                 onDismiss = { pickerFeature = null },
@@ -369,13 +377,40 @@ private fun ProviderCard(
 
         if (fetchedModels.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            Text(
-                text = "模型（${fetchedModels.size}）：${fetchedModels.joinToString("、")}",
-                color = GlassTokens.TextSecondary.copy(alpha = 0.75f),
-                fontSize = 10.sp,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                fetchedModels.forEach { model ->
+                    val enabled = provider.modelList().contains(model)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                val list = provider.modelList().toMutableList()
+                                if (enabled) list.remove(model) else list.add(model)
+                                val array = org.json.JSONArray()
+                                list.forEach { array.put(it) }
+                                onChange(provider.copy(enabledModelsJson = array.toString()))
+                            }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = enabled, onCheckedChange = null)
+                        Text(
+                            text = model,
+                            color = GlassTokens.TextPrimary,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -556,12 +591,12 @@ fun SettingsRoute(onBack: () -> Unit) {
             viewModel.setBinding(feature, providerId, model)
         },
         onTest = viewModel::test,
-        fetchModels = viewModel::fetchModels,
         fetchedModels = fetchedModels,
         balanceText = balanceText,
         onFetchModels = viewModel::fetchModelList,
         onQueryBalance = viewModel::queryBalance,
         onImportConfig = viewModel::importConfig,
+        onSearchKey = viewModel::setSearchKey,
         onSave = viewModel::save,
         onBack = onBack,
     )

@@ -75,6 +75,12 @@ class SettingsViewModel(
         )
     }
 
+    fun setSearchKey(id: String, key: String) {
+        val keys = _state.value.searchKeys.toMutableMap()
+        keys[id] = key.trim()
+        _state.value = _state.value.copy(searchKeys = keys)
+    }
+
     fun setBinding(feature: Feature, providerId: String, model: String) {
         val bindings = _state.value.bindings.toMutableMap()
         bindings[feature] = FeatureBinding(providerId = providerId, model = model)
