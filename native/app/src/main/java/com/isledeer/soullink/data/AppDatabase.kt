@@ -6,12 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [MessageEntity::class],
-    version = 1,
+    entities = [ConversationEntity::class, MessageEntity::class],
+    // v2：新增会话表；messages 增加多模态与统计字段
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
 
+    abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
 
     companion object {
@@ -25,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "soullink.db",
                 )
-                    // 早期版本表结构还会动，直接重建；等有真实用户数据再写 Migration
+                    // 仍在早期迭代，结构变就直接重建；有真实用户数据前不写 Migration
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }

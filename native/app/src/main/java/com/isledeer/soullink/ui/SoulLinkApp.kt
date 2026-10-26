@@ -8,9 +8,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import org.koin.androidx.compose.koinViewModel
 
-/**
- * 路由表。启动即进聊天；设置与世界书都是二级页。
- */
 object Routes {
     const val CHAT = "chat"
     const val SETTINGS = "settings"
@@ -27,21 +24,17 @@ fun SoulLinkApp() {
     ) {
         composable(Routes.CHAT) {
             ChatRoute(
+                onOpenProviderSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenWorldBook = { navController.navigate(Routes.WORLD_BOOK) },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
             )
         }
 
         composable(Routes.SETTINGS) {
-            SettingsRoute(
-                onBack = { navController.popBackStack() },
-            )
+            SettingsRoute(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.WORLD_BOOK) {
-            WorldBookScreen(
-                onBack = { navController.popBackStack() },
-            )
+            WorldBookScreen(onBack = { navController.popBackStack() })
         }
     }
 }
@@ -50,11 +43,21 @@ fun SoulLinkApp() {
 private fun SettingsRoute(onBack: () -> Unit) {
     val viewModel: SettingsViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val testingId by viewModel.testing.collectAsStateWithLifecycle()
+    val testResult by viewModel.testResult.collectAsStateWithLifecycle()
 
     SettingsScreen(
         state = state,
-        onChange = { updated -> viewModel.update { updated } },
-        onSave = { viewModel.save() },
+        testingProviderId = testingId,
+        testResult = testResult,
+        onAddProvider = viewModel::addProvider,
+        onUpdateProvider = viewModel::updateProvider,
+        onRemoveProvider = viewModel::removeProvider,
+        onSetBinding = { feature, providerId, model ->
+            viewModel.setBinding(feature, providerId, model)
+        },
+        onTest = viewModel::test,
+        onSave = viewModel::save,
         onBack = onBack,
     )
 }

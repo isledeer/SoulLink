@@ -2,30 +2,13 @@ package com.isledeer.soullink.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,26 +16,30 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.isledeer.soullink.data.ApiSettings
+import com.isledeer.soullink.data.AppSettings
+import com.isledeer.soullink.data.Feature
+import com.isledeer.soullink.data.ProviderConfig
 
 /**
- * API 配置页。
- *
- * 纯本地应用：Key 只写进本机 DataStore，不上传、不中转。
- * 这里只做最小可用集合（兼容任意 OpenAI 兼容端点），
- * 温度/最大 token 等高级项等「高级设置」折叠区再补。
+ * 设置页：Provider 管理 + 功能模型绑定。
+ * 大圆角卡片堆叠，视觉与聊天页同源（GlassTokens + liquidGlass）。
  */
 @Composable
 fun SettingsScreen(
-    state: ApiSettings,
-    onChange: (ApiSettings) -> Unit,
+    state: AppSettings,
+    testingProviderId: String?,
+    testResult: String?,
+    onAddProvider: () -> Unit,
+    onUpdateProvider: (ProviderConfig) -> Unit,
+    onRemoveProvider: (String) -> Unit,
+    onSetBinding: (Feature, String, String) -> Unit,
+    onTest: (ProviderConfig) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
-    var savedHint by remember { mutableStateOf(false) }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -65,7 +52,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -85,7 +72,7 @@ fun SettingsScreen(
                     Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp)
                 }
                 Text(
-                    text = "API 设置",
+                    text = "设置",
                     color = GlassTokens.TextPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -98,44 +85,65 @@ fun SettingsScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 16.dp)
+                    .padding(top = 14.dp)
             ) {
-                SettingsField(
-                    label = "API Base URL",
-                    value = state.baseUrl,
-                    placeholder = "https://api.openai.com/v1",
-                    onChange = { onChange(state.copy(baseUrl = it)) },
-                )
-                SettingsField(
-                    label = "API Key",
-                    value = state.apiKey,
-                    placeholder = "sk-…",
-                    password = true,
-                    onChange = { onChange(state.copy(apiKey = it)) },
-                )
-                SettingsField(
-                    label = "模型名",
-                    value = state.model,
-                    placeholder = "gpt-4o-mini / deepseek-chat / …",
-                    onChange = { onChange(state.copy(model = it)) },
-                )
-                SettingsField(
-                    label = "最大输出 token",
-                    value = state.maxTokens.toString(),
-                    placeholder = "2048",
-                    numeric = true,
-                    onChange = { text ->
-                        text.toIntOrNull()?.let { onChange(state.copy(maxTokens = it)) }
-                    },
-                )
+                SectionTitle("提供商")
 
-                Spacer(Modifier.height(8.dp))
+                state.providers.forEach { provider ->
+                    ProviderCard(
+                        provider = provider,
+                        testing = testingProviderId == provider.id,
+                        onChange = onUpdateProvider,
+                        onRemove = { onRemoveProvider(provider.id) },
+                        onTest = { onTest(provider) },
+                    )
+                }
+
+                if (state.providers.isEmpty()) {
+                    Text(
+                        text = "还没有提供商，先添加一个（任何 OpenAI 兼容端点都行）。",
+                        color = GlassTokens.TextSecondary.copy(alpha = 0.75f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(GlassTokens.Primary.copy(alpha = 0.16f))
+                        .clickable(onClick = onAddProvider)
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text("＋ 添加提供商", color = GlassTokens.Primary, fontSize = 13.sp)
+                }
+
+                testResult?.let { result ->
+                    Text(
+                        text = result,
+                        color = if (result.startsWith("连接成功")) GlassTokens.Primary else GlassTokens.Accent,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+                SectionTitle("功能模型绑定")
+
+                Feature.entries.forEach { feature ->
+                    BindingCard(
+                        feature = feature,
+                        settings = state,
+                        onSetBinding = onSetBinding,
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
 
                 Button(
-                    onClick = {
-                        onSave()
-                        savedHint = true
-                    },
+                    onClick = onSave,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GlassTokens.Primary,
@@ -145,24 +153,14 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .height(48.dp),
                 ) {
-                    Text("保存", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                }
-
-                if (savedHint) {
-                    Text(
-                        text = "已保存到本机",
-                        color = GlassTokens.TextSecondary,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
+                    Text("保存全部", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 Text(
-                    text = "Key 只保存在本设备（DataStore），不经过任何服务器。",
-                    color = GlassTokens.TextSecondary.copy(alpha = 0.7f),
+                    text = "所有 Key 只保存在本机 DataStore，不经过任何服务器。",
+                    color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
                     fontSize = 11.sp,
-                    lineHeight = 17.sp,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 24.dp),
+                    modifier = Modifier.padding(top = 10.dp, bottom = 28.dp),
                 )
             }
         }
@@ -170,47 +168,168 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsField(
-    label: String,
-    value: String,
-    placeholder: String = "",
-    password: Boolean = false,
-    numeric: Boolean = false,
-    onChange: (String) -> Unit,
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        color = GlassTokens.TextSecondary,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+    )
+}
+
+@Composable
+private fun ProviderCard(
+    provider: ProviderConfig,
+    testing: Boolean,
+    onChange: (ProviderConfig) -> Unit,
+    onRemove: () -> Unit,
+    onTest: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(bottom = 12.dp)) {
-        Text(
-            text = label,
-            color = GlassTokens.TextSecondary,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 6.dp, start = 4.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .liquidGlass(cornerRadius = 20.dp)
+            .padding(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SettingsInput(
+                value = provider.name,
+                placeholder = "名称（如 DeepSeek）",
+                onValueChange = { onChange(provider.copy(name = it)) },
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "删除",
+                color = GlassTokens.Accent,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = onRemove)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        SettingsInput(
+            value = provider.baseUrl,
+            placeholder = "Base URL（https://api.xxx.com/v1）",
+            onValueChange = { onChange(provider.copy(baseUrl = it)) },
         )
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            singleLine = true,
-            placeholder = {
-                Text(placeholder, color = GlassTokens.TextSecondary.copy(alpha = 0.45f), fontSize = 14.sp)
-            },
-            visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-            keyboardOptions = if (numeric) {
-                androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+
+        Spacer(Modifier.height(8.dp))
+        SettingsInput(
+            value = provider.apiKey,
+            placeholder = "API Key（sk-…）",
+            password = true,
+            onValueChange = { onChange(provider.copy(apiKey = it)) },
+        )
+
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (testing) "测试中…" else "测试连通性",
+                color = GlassTokens.Primary,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(enabled = !testing, onClick = onTest)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BindingCard(
+    feature: Feature,
+    settings: AppSettings,
+    onSetBinding: (Feature, String, String) -> Unit,
+) {
+    val binding = settings.bindings[feature]
+    val providerId = binding?.providerId
+        ?: settings.bindings[Feature.CHAT]?.providerId
+        ?: settings.providers.firstOrNull()?.id
+        .orEmpty()
+    val model = binding?.model.orEmpty()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .liquidGlass(cornerRadius = 20.dp)
+            .padding(14.dp)
+    ) {
+        Text(feature.label, color = GlassTokens.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            settings.providers.forEach { provider ->
+                val active = provider.id == providerId
+                Text(
+                    text = provider.name.ifBlank { "未命名" },
+                    color = if (active) Color.White else GlassTokens.TextSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (active) GlassTokens.Primary.copy(alpha = 0.85f)
+                            else GlassTokens.BubbleAi.copy(alpha = 0.7f)
+                        )
+                        .clickable { onSetBinding(feature, provider.id, model) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                 )
-            } else {
-                androidx.compose.foundation.text.KeyboardOptions()
-            },
-            shape = RoundedCornerShape(16.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0x14FFFFFF),
-                unfocusedContainerColor = Color(0x0DFFFFFF),
-                focusedTextColor = GlassTokens.TextPrimary,
-                unfocusedTextColor = GlassTokens.TextPrimary,
-                cursorColor = GlassTokens.Primary,
-                focusedIndicatorColor = GlassTokens.Primary.copy(alpha = 0.6f),
-                unfocusedIndicatorColor = Color(0x1FFFFFFF),
-            ),
-            modifier = Modifier.fillMaxWidth(),
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        SettingsInput(
+            value = model,
+            placeholder = "模型名（如 deepseek-chat）",
+            onValueChange = { onSetBinding(feature, providerId, it) },
         )
     }
+}
+
+@Composable
+private fun SettingsInput(
+    value: String,
+    placeholder: String,
+    password: Boolean = false,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        placeholder = {
+            Text(
+                text = placeholder,
+                color = GlassTokens.TextSecondary.copy(alpha = 0.45f),
+                fontSize = 12.sp,
+            )
+        },
+        visualTransformation = if (password) {
+            PasswordVisualTransformation()
+        } else {
+            androidx.compose.ui.text.input.VisualTransformation.None
+        },
+        shape = RoundedCornerShape(14.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color(0x14FFFFFF),
+            unfocusedContainerColor = Color(0x0DFFFFFF),
+            focusedTextColor = GlassTokens.TextPrimary,
+            unfocusedTextColor = GlassTokens.TextPrimary,
+            cursorColor = GlassTokens.Primary,
+            focusedIndicatorColor = GlassTokens.Primary.copy(alpha = 0.6f),
+            unfocusedIndicatorColor = Color(0x1FFFFFFF),
+        ),
+        modifier = modifier,
+    )
 }

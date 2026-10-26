@@ -1,26 +1,51 @@
 package com.isledeer.soullink.data
 
+import androidx.room.Dao
 import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
+import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 /**
- * 消息落盘实体。
+ * 消息实体。
  *
- * 刻意保留 reasoning（思维链）：角色扮演里「模型想过什么」往往比正文更值钱，
- * 而且重放/编辑重发时要靠它还原上下文。
- *
- * conversationId 现在固定 "default"，等支持多存档时直接当外键用，不用改表结构。
+ * v2 新增：imageBase64（多模态）、generationSpeed（tok/s）、tokenCount、
+ * isFavorite（收藏）。schema 变了但仍在早期，直接 destructive migration。
  */
 @Entity(tableName = "messages")
 data class MessageEntity(
     @PrimaryKey val id: String,
-    val conversationId: String = DEFAULT_CONVERSATION,
+    val conversationId: String,
     val role: String,
     val content: String,
     val reasoning: String?,
+    val imageBase64: String? = null,
+    val generationSpeed: Double = 0.0,
+    val tokenCount: Int = 0,
+    val isFavorite: Boolean = false,
     val createdAt: Long,
-) {
-    companion object {
-        const val DEFAULT_CONVERSATION = "default"
-    }
+)
+
+@Dao
+interface MessageDao {
+
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY createdAt ASC")
+    fun observeConversation(conversationId: String): Flow<List<MessageEntity>>
+
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY createdAt ASC")
+    suspend fun loadConversation(conversationId: String): List<MessageEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(message: MessageEntity)
+
+    @Query("DELETE FROM messages WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM messages WHERE conversationId = :conversationId")
+    suspend fun clearConversation(conversationId: String)
+
+    @Query("UPDATE messages SET isFavorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: String, favorite: Boolean)
 }

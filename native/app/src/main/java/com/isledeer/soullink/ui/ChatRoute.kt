@@ -3,39 +3,44 @@ package com.isledeer.soullink.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.isledeer.soullink.data.Feature
 import org.koin.androidx.compose.koinViewModel
 
-/**
- * 聊天页接线层：ViewModel → ChatScreen。
- *
- * 这里刻意保持极薄 —— 所有业务都在 ChatViewModel 里，
- * ChatScreen 只吃参数，方便预览、测试和将来换数据源。
- */
+/** 聊天页接线：ViewModel → ChatScreen（零业务逻辑） */
 @Composable
 fun ChatRoute(
+    onOpenProviderSettings: () -> Unit,
     onOpenWorldBook: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val viewModel: ChatViewModel = koinViewModel()
 
+    val conversations by viewModel.conversations.collectAsStateWithLifecycle()
+    val current by viewModel.current.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val isGenerating by viewModel.isGenerating.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
-    val turns = messages.count { it.role == Role.User }
-
     ChatScreen(
-        title = "isledeer",
-        subtitle = if (turns == 0) "新的对话" else "$turns 轮 · 本地",
-        modelName = settings.model.ifBlank { "未设置模型" },
-        availableModels = listOfNotNull(settings.model.takeIf { it.isNotBlank() }),
+        conversations = conversations,
+        current = current,
         messages = messages,
         isGenerating = isGenerating,
-        onBack = { /* 聊天是起始页 */ },
-        onPickModel = { /* 目前单模型；接 /models 列表后启用 */ },
-        onSend = viewModel::send,
-        onStop = viewModel::stop,
+        modelName = settings.modelFor(Feature.CHAT),
+        onSelectConversation = viewModel::selectConversation,
+        onNewConversation = viewModel::newConversation,
+        onDeleteConversation = viewModel::deleteConversation,
+        onOpenProviderSettings = onOpenProviderSettings,
         onOpenWorldBook = onOpenWorldBook,
-        onOpenSettings = onOpenSettings,
+        onSend = { text, image -> viewModel.send(text, image) },
+        onStop = viewModel::stop,
+        onRegenerate = viewModel::regenerate,
+        onDeleteMessage = viewModel::deleteMessage,
+        onEditMessage = viewModel::editMessage,
+        onToggleFavorite = viewModel::toggleFavorite,
+        onSpeak = viewModel::speak,
+        onBranch = viewModel::branchFrom,
+        onUpdateConversation = { prompt, tokens, temp ->
+            viewModel.updateCurrentConversation(prompt, tokens, temp)
+        },
     )
 }
