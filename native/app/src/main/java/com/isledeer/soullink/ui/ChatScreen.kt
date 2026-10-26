@@ -352,6 +352,29 @@ fun ChatScreen(
             },
         )
     }
+
+    if (consoleVisible) {
+        val toast: (String) -> Unit = { text ->
+            android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
+        }
+        com.isledeer.soullink.ui.components.ChatConsoleMenu(
+            expanded = true,
+            onDismiss = { consoleVisible = false },
+            tokenUsage = tokenUsage,
+            autoCompress = autoCompress,
+            onNewConversation = onNewConversation,
+            onSearch = { toast("会话内搜索开发中") },
+            onShare = { toast("分享 / 导出开发中") },
+            onClearConversation = { onClearContext() },
+            onOpenConversationSettings = { settingsVisible = true },
+            onToggleAutoCompress = onToggleAutoCompress,
+            onMemory = { toast("记忆面板开发中") },
+            onSkills = { toast("技能面板开发中") },
+            onMcp = { toast("MCP 状态开发中") },
+            onMessageTree = { toast("消息树视图开发中") },
+            onRawDebug = { toast("RAW 面板开发中") },
+        )
+    }
 }
 
 @Composable
@@ -392,27 +415,5 @@ private fun EditMessageDialog(
                 TextButton(onClick = { onConfirm(text) }) { Text("保存", color = GlassTokens.Primary) }
             }
         }
-    }
-    if (consoleVisible) {
-        val toast: (String) -> Unit = { text ->
-            android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-        }
-        com.isledeer.soullink.ui.components.ChatConsoleMenu(
-            expanded = true,
-            onDismiss = { consoleVisible = false },
-            tokenUsage = tokenUsage,
-            autoCompress = autoCompress,
-            onNewConversation = onNewConversation,
-            onSearch = { toast("会话内搜索开发中") },
-            onShare = { toast("分享 / 导出开发中") },
-            onClearConversation = { onClearContext() },
-            onOpenConversationSettings = { settingsVisible = true },
-            onToggleAutoCompress = onToggleAutoCompress,
-            onMemory = { toast("记忆面板开发中") },
-            onSkills = { toast("技能面板开发中") },
-            onMcp = { toast("MCP 状态开发中") },
-            onMessageTree = { toast("消息树视图开发中") },
-            onRawDebug = { toast("RAW 面板开发中") },
-        )
     }
 }
