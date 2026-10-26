@@ -210,21 +210,21 @@ export default function Chat() {
         />
       )}
 
-      <header className="flex items-center gap-2 p-3 border-b border-surface-200 dark:border-surface-700">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+      <header className="flex items-center gap-1.5 px-2 py-2 border-b border-surface-200 dark:border-surface-700">
+        <Button variant="ghost" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => navigate('/')}>
           ← 返回
         </Button>
-        <h1 className="flex-1 font-semibold truncate text-text-primary dark:text-surface-100">
+        <h1 className="flex-1 min-w-0 font-semibold truncate text-text-primary dark:text-surface-100">
           {displayName}
         </h1>
 
         {/* 模型切换：点击展开下拉，选项来自 settings store 的 availableModels */}
-        <div className="relative z-50">
+        <div className="relative z-50 shrink-0">
           <button
             type="button"
             onClick={() => setShowModelMenu((v) => !v)}
             title={modelName}
-            className="flex items-center gap-1 max-w-[10rem] text-xs text-text-secondary
+            className="flex items-center gap-1 max-w-[6rem] shrink-0 text-xs text-text-secondary
                        px-2 py-1 rounded border border-surface-300 dark:border-surface-700
                        hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
           >
@@ -264,19 +264,19 @@ export default function Chat() {
           )}
         </div>
 
-        <div className="text-xs text-text-secondary px-2">
+        <div className="text-xs text-text-secondary px-2 shrink-0 whitespace-nowrap">
           {affinity} · {levelLabel}
         </div>
         <button
           type="button"
           onClick={() => setShowDebug(!showDebug)}
-          className="text-xs text-accent-500 px-2 py-1 rounded
+          className="shrink-0 text-xs text-accent-500 px-2 py-1 rounded
                      hover:bg-surface-200 dark:hover:bg-surface-700
                      transition-colors"
         >
           RAW
         </button>
-        <Button variant="ghost" size="sm" onClick={() => setShowSaves(true)}>
+        <Button variant="ghost" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => setShowSaves(true)}>
           存档
         </Button>
       </header>

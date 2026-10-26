@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -15,37 +16,34 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
 
 /**
- * SoulLink 混合架构主入口：Compose 原生外壳 + WebView React 内核。
+ * 混合架构主入口：**不设原生顶栏**，WebView 全屏承载 React 内核。
  *
- * 内核加载走本地 HTTP Server（LocalAssetServer）而非 file:///android_asset，
- * 原因见 LocalAssetServer 的类注释。外壳目前只提供：
- *   - TopAppBar（标题由 JS 经桥推送，演示 JS→Kotlin 通路）
- *   - PING JS 按钮（演示 Kotlin→JS 通路）
- *   - 返回键接管（hash 路由回退 / 退出）
- *   - <input type="file"> 文件选择器桥接（角色卡导入依赖它，漏了导入直接死）
+ * 设计取舍（v2）：
+ *  - 删掉 Compose TopAppBar：Web 内核自带导航栏，双层 Header 既浪费空间
+ *    又抢视觉重心。壳的职责是做 Web 做不到的事（原生网络、通知、文件），
+ *    不是和 Web 抢地皮。
+ *  - 因此「PING JS」从按钮下放到桥里：window.SoulLinkNative.pingJs()。
+ *    Web 的 RAW 调试面板加个按钮即可触发，比原生 OptionMenu 更贴合架构
+ *    （无 ActionBar 就没有菜单落点，硬塞 Toolbar 等于把顶栏请回来）。
+ *  - 状态栏 / 导航栏刷成与 Web 背景同色（#0F172A = tailwind surface-900），
+ *    图标保持浅色，视觉上无缝。
+ *  - **没有做真正的 edge-to-edge（内容钻到状态栏底下）**：Web 顶栏没有吃
+ *    env(safe-area-inset-top)，钻下去会被状态栏图标压住。要真沉浸式，
+ *    需要 Web 侧给 header 加 safe-area 内边距后再改这里（见 README）。
  *
- * 后续设置页、导航栏等原生 UI 都往这个 Compose 骨架里加。
+ * 保留的能力：返回键接管、文件选择器（角色卡导入）、原生 SSE 通道。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
-    private var title by mutableStateOf("SoulLink")
     private var server: LocalAssetServer? = null
 
     /** <input type="file"> 的回传目标（角色卡 PNG 导入走这里） */
@@ -72,27 +70,21 @@ class MainActivity : ComponentActivity() {
             WebView.setWebContentsDebuggingEnabled(true)
         }
 
+        setupSystemBars()
+
         // 先起本地内核服务器（同步 bind，极快），再进 Compose 挂 WebView
         server = LocalAssetServer(this).also { it.start() }
 
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        TopAppBar(
-                            title = { Text(title) },
-                            actions = {
-                                TextButton(onClick = { pingJs() }) {
-                                    Text("PING JS")
-                                }
-                            }
-                        )
-                        AndroidView(
-                            factory = { ctx -> createWebView(ctx) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color(WEB_BACKGROUND_ARGB)
+            ) {
+                AndroidView(
+                    factory = { ctx -> createWebView(ctx) },
+                    // 关键：撑满整个可用区域，不再被任何原生栏切一块
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             BackHandler {
@@ -105,10 +97,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * 状态栏 / 导航栏与 Web 背景同色，图标保持浅色。
+     * 注意：内容仍从状态栏下方开始（decorFitsSystemWindows 默认 true），
+     * 不做真 edge-to-edge，避免 Web 顶栏被状态栏图标压住。
+     */
+    private fun setupSystemBars() {
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = WEB_BACKGROUND_ARGB
+        window.navigationBarColor = WEB_BACKGROUND_ARGB
+
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun createWebView(ctx: Context): WebView {
         return WebView(ctx).apply {
             this@MainActivity.webView = this
+
+            // 避免加载瞬间闪白底
+            setBackgroundColor(WEB_BACKGROUND_ARGB)
 
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -117,10 +128,11 @@ class MainActivity : ComponentActivity() {
             settings.allowContentAccess = false
 
             // 桥：JS 调 window.SoulLinkNative.*，Kotlin 反向走 evaluateJavascript
-            // 注意：apply 里隐式接收者是 WebView，它自带只读的 getTitle()，
-            // 直接写 title = ... 会撞上那个 val，必须用 this@MainActivity 限定。
             addJavascriptInterface(
-                WebAppInterface(this) { newTitle -> this@MainActivity.title = newTitle },
+                WebAppInterface(this) { newTitle ->
+                    // 无原生顶栏后，标题只体现在任务切换卡片 / 最近任务里
+                    this@MainActivity.setTitle(newTitle)
+                },
                 JS_BRIDGE_NAME
             )
 
@@ -164,16 +176,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Kotlin → JS 演示：调内核里注册的 window.SoulLink.onNativePing */
-    private fun pingJs() {
-        if (!this::webView.isInitialized) return
-        webView.evaluateJavascript(
-            "window.SoulLink && window.SoulLink.onNativePing " +
-                "? window.SoulLink.onNativePing('hello from kotlin') : 'no handler'",
-            null
-        )
-    }
-
     override fun onPause() {
         super.onPause()
         if (this::webView.isInitialized) webView.onPause()
@@ -198,5 +200,8 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "SoulLinkMain"
         const val JS_BRIDGE_NAME = "SoulLinkNative"
         private const val FALLBACK_URL = "file:///android_asset/index.html"
+
+        /** 与 tailwind `surface-900` (#0f172a) 对齐 */
+        private val WEB_BACKGROUND_ARGB = 0xFF0F172A.toInt()
     }
 }
