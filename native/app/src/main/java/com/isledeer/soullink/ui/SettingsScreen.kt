@@ -1,8 +1,5 @@
 package com.isledeer.soullink.ui
 
-import com.isledeer.soullink.ui.components.CardGroup
-import com.isledeer.soullink.ui.components.CardGroupItem
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

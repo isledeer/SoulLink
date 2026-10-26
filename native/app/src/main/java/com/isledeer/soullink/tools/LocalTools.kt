@@ -29,8 +29,9 @@ data class LocalTool(
 
 class LocalTools(private val context: Context) {
 
-    /** 生图钩子：由 ChatViewModel 按当前 Provider 注入（返回 base64 或 null） */
-    var imageGenerator: (suspend (String) -> String?)? = null
+    /** 生图钩子：由 ChatViewModel 按当前 Provider 注入（返回 base64 或 null）。
+     *  非 suspend：executor 统一是普通 lambda，suspend 调用在注入侧用 runBlocking 消化。 */
+    var imageGenerator: ((String) -> String?)? = null
 
     val all: List<LocalTool> = listOf(timeTool(), clipboardTool(), imageTool())
 
@@ -45,7 +46,7 @@ class LocalTools(private val context: Context) {
         name = "get_current_time",
         description = "获取当前日期、时间与时区。",
         parameters = JSONObject().put("type", "object").put("properties", JSONObject()),
-        executor = suspend { _: JSONObject ->
+        executor = { args: JSONObject ->
             val now = Date()
             val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val zone = TimeZone.getDefault()
@@ -59,7 +60,7 @@ class LocalTools(private val context: Context) {
         name = "clipboard_read",
         description = "读取系统剪贴板中的文本内容。",
         parameters = JSONObject().put("type", "object").put("properties", JSONObject()),
-        executor = suspend { _: JSONObject ->
+        executor = { args: JSONObject ->
             val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             val text = manager?.primaryClip
                 ?.takeIf { it.itemCount > 0 }
@@ -81,7 +82,7 @@ class LocalTools(private val context: Context) {
                 JSONObject().put("prompt", JSONObject().put("type", "string"))
             ),
         outputImage = true,
-        executor = suspend { args: JSONObject ->
+        executor = { args: JSONObject ->
             val prompt = args.optString("prompt")
             if (prompt.isBlank()) {
                 "缺少 prompt 参数"

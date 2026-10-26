@@ -1,7 +1,5 @@
 package com.isledeer.soullink.ui
 
-import kotlinx.coroutines.flow.stateIn
-
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,6 +24,7 @@ import com.isledeer.soullink.tools.LocalTool
 import com.isledeer.soullink.tools.LocalTools
 import com.isledeer.soullink.util.Speaker
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -112,7 +111,7 @@ class ChatViewModel(
                 _settings.value = settings
                 val provider = settings.providerFor(Feature.CHAT)
                 tools.imageGenerator = if (provider != null && provider.baseUrl.isNotBlank()) {
-                    { prompt -> sse.generateImage(provider.baseUrl, provider.apiKey, prompt) }
+                    { prompt -> runBlocking { sse.generateImage(provider.baseUrl, provider.apiKey, prompt) } }
                 } else {
                     null
                 }
