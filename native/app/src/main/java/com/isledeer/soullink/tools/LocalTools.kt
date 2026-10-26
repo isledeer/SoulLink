@@ -45,7 +45,7 @@ class LocalTools(private val context: Context) {
         name = "get_current_time",
         description = "获取当前日期、时间与时区。",
         parameters = JSONObject().put("type", "object").put("properties", JSONObject()),
-        executor = suspend {
+        executor = suspend { _ ->
             val now = Date()
             val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val zone = TimeZone.getDefault()
@@ -59,7 +59,7 @@ class LocalTools(private val context: Context) {
         name = "clipboard_read",
         description = "读取系统剪贴板中的文本内容。",
         parameters = JSONObject().put("type", "object").put("properties", JSONObject()),
-        executor = suspend {
+        executor = suspend { _ ->
             val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             val text = manager?.primaryClip
                 ?.takeIf { it.itemCount > 0 }

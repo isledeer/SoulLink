@@ -604,10 +604,12 @@ class ChatViewModel(
         val result = if (tool == null) {
             "未知工具：${call.name}"
         } else {
-            runCatching {
+            try {
                 val args = runCatching { JSONObject(call.arguments) }.getOrDefault(JSONObject())
                 tool.executor(args)
-            }.getOrElse { "工具执行失败：${it.message ?: "未知错误"}" }
+            } catch (e: Exception) {
+                "工具执行失败：${e.message ?: "未知错误"}"
+            }
         }
 
         if (tool != null && tool.outputImage && result.isNotBlank() &&
