@@ -301,6 +301,7 @@ fun ChatScreen(
                     )
                 )
             },
+            onFile = { notice = "文件上传暂未开放" },
         )
     }
 
