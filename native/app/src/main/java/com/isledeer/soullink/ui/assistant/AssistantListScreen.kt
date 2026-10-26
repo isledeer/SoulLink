@@ -200,11 +200,13 @@ private fun AssistantRow(
 
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
+                        text = { Text("克隆") },
                         onClick = { menu = false; onClone() },
-                    ) { Text("克隆") }
+                    )
                     DropdownMenuItem(
+                        text = { Text("删除", color = GlassTokens.Accent) },
                         onClick = { menu = false; onDelete() },
-                    ) { Text("删除", color = GlassTokens.Accent) }
+                    )
                 }
             }
         }
