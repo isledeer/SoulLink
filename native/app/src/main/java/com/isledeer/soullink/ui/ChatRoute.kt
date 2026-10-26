@@ -22,6 +22,7 @@ fun ChatRoute(
     val tokenUsage by viewModel.tokenUsage.collectAsStateWithLifecycle()
     val autoCompress by viewModel.autoCompress.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val currentAssistant by viewModel.currentAssistant.collectAsStateWithLifecycle()
 
     ChatScreen(
         conversations = conversations,
@@ -42,8 +43,15 @@ fun ChatRoute(
         onToggleAutoCompress = viewModel::toggleAutoCompress,
         onContinueGeneration = viewModel::continueGeneration,
         onClearContext = viewModel::clearContext,
-        quickPrompts = viewModel.currentAssistant.value?.promptList().orEmpty(),
-        onQuickSend = { prompt -> viewModel.send(prompt, null) },
+        toolStates = mapOf(
+            "time" to (currentAssistant?.toolList()?.contains("time") == true),
+            "clipboard" to (currentAssistant?.toolList()?.contains("clipboard") == true),
+            "tts" to (currentAssistant?.toolList()?.contains("tts") == true),
+        ),
+        onToggleTool = viewModel::toggleLocalTool,
+        providers = settings.providers,
+        fetchModels = viewModel::fetchModelsForChat,
+        onPickChatModel = viewModel::setAssistantModel,
         onRegenerate = viewModel::regenerate,
         onDeleteMessage = viewModel::deleteMessage,
         onEditMessage = viewModel::editMessage,

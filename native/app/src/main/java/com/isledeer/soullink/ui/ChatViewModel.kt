@@ -12,6 +12,7 @@ import com.isledeer.soullink.data.ConversationEntity
 import com.isledeer.soullink.data.Feature
 import com.isledeer.soullink.data.MessageParts
 import com.isledeer.soullink.data.MessageTreeRepository
+import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.data.ResolvedConfig
 import com.isledeer.soullink.data.SettingsRepository
 import com.isledeer.soullink.data.UIMessageEntity
@@ -324,6 +325,29 @@ class ChatViewModel(
     fun toggleAutoCompress() {
         _autoCompress.value = !_autoCompress.value
     }
+
+    /** 工具面板开关：增删当前助手的 localTools 并落库 */
+    fun toggleLocalTool(id: String) {
+        val assistant = _currentAssistant.value ?: return
+        val list = assistant.toolList().toMutableList()
+        if (list.contains(id)) list.remove(id) else list.add(id)
+        val array = org.json.JSONArray()
+        list.forEach { array.put(it) }
+        val updated = assistant.copy(localTools = array.toString(), updatedAt = System.currentTimeMillis())
+        _currentAssistant.value = updated
+        viewModelScope.launch { assistantDao.upsert(updated) }
+    }
+
+    /** 顶栏模型选择：写入当前助手的 chatModelId */
+    fun setAssistantModel(model: String) {
+        val assistant = _currentAssistant.value ?: return
+        val updated = assistant.copy(chatModelId = model, updatedAt = System.currentTimeMillis())
+        _currentAssistant.value = updated
+        viewModelScope.launch { assistantDao.upsert(updated) }
+    }
+
+    suspend fun fetchModelsForChat(provider: ProviderConfig): Result<List<String>> =
+        runCatching { sse.fetchModels(provider.baseUrl, provider.apiKey) }
 
     fun speak(text: String) = speaker.speak(text)
 

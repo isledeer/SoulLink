@@ -5,6 +5,11 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -49,8 +54,7 @@ fun ChatTopBar(
     title: String,
     modelName: String,
     onOpenDrawer: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenConsole: () -> Unit,
+    onOpenMenu: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -61,12 +65,15 @@ fun ChatTopBar(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircleIconButton("☰", onOpenDrawer)
+        IconButton(onClick = onOpenDrawer) {
+            Icon(Icons.Outlined.Menu, contentDescription = "菜单", tint = GlassTokens.TextSecondary, modifier = Modifier.size(22.dp))
+        }
 
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = 4.dp),
+            verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = title,
@@ -78,15 +85,18 @@ fun ChatTopBar(
             )
             Text(
                 text = modelName,
-                color = GlassTokens.TextSecondary,
+                color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        CircleIconButton("⚙", onOpenSettings)
-        CircleIconButton("⋮", onOpenConsole)
+        Box {
+            IconButton(onClick = onOpenMenu) {
+                Icon(Icons.Outlined.MoreVert, contentDescription = "更多", tint = GlassTokens.TextSecondary, modifier = Modifier.size(22.dp))
+            }
+        }
     }
 }
 
@@ -250,176 +260,4 @@ private fun rememberThumbnail(base64: String): Bitmap? = remember(base64) {
         val bytes = Base64.decode(base64, Base64.DEFAULT)
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }.getOrNull()
-}
-
-/* ----------------------------- 输入区 ----------------------------- */
-
-@Composable
-fun ChatInputBar(
-    value: String,
-    onValueChange: (String) -> Unit,
-    isGenerating: Boolean,
-    pendingImage: String?,
-    onClearImage: () -> Unit,
-    onOpenAttach: () -> Unit,
-    quickPrompts: List<String>,
-    onQuickSend: (String) -> Unit,
-    onOpenConversationSettings: () -> Unit,
-    onVoiceInput: () -> Unit,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        // 底部微型入口：对话级 System Prompt
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            Text(
-                text = "⚙ 系统提示",
-                color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
-                fontSize = 10.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onOpenConversationSettings)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
-
-        if (pendingImage != null) {
-            val bitmap = rememberThumbnail(pendingImage)
-            Row(
-                modifier = Modifier.padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "待发送图片",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "✕ 移除",
-                    color = GlassTokens.Accent,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onClearImage)
-                        .padding(6.dp),
-                )
-            }
-        }
-
-        Row(verticalAlignment = Alignment.Bottom) {
-            Surface(
-                onClick = onOpenAttach,
-                shape = CircleShape,
-                color = GlassTokens.BubbleAi.copy(alpha = 0.8f),
-                modifier = Modifier.size(46.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("+", color = GlassTokens.TextSecondary, fontSize = 20.sp)
-                }
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .liquidGlass(cornerRadius = GlassTokens.PillRadius)
-                    .heightIn(min = 46.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    textStyle = TextStyle(
-                        color = GlassTokens.TextPrimary,
-                        fontSize = 15.sp,
-                        lineHeight = 21.sp,
-                    ),
-                    cursorBrush = SolidColor(GlassTokens.Primary),
-                    maxLines = 5,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 13.dp),
-                    decorationBox = { innerTextField ->
-                        if (value.isEmpty()) {
-                            Text(
-                                text = if (isGenerating) "生成中，可先输入下一条…" else "输入消息…",
-                                color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
-                                fontSize = 15.sp,
-                            )
-                        }
-                        innerTextField()
-                    },
-                )
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Surface(
-                onClick = onVoiceInput,
-                shape = CircleShape,
-                color = GlassTokens.BubbleAi.copy(alpha = 0.8f),
-                modifier = Modifier.size(46.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("🎤", fontSize = 16.sp)
-                }
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Surface(
-                onClick = { if (isGenerating) onStop() else onSend() },
-                shape = CircleShape,
-                color = if (isGenerating) GlassTokens.BubbleAi else GlassTokens.Primary,
-                modifier = Modifier.size(46.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (isGenerating) "■" else "↑",
-                        color = if (isGenerating) GlassTokens.Accent else Color.White,
-                        fontSize = if (isGenerating) 14.sp else 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-        }
-
-        if (quickPrompts.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                quickPrompts.take(8).forEach { prompt ->
-                    Text(
-                        text = prompt,
-                        color = GlassTokens.TextSecondary,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(GlassTokens.Primary.copy(alpha = 0.10f))
-                            .clickable { onQuickSend(prompt) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                    )
-                }
-            }
-        }
-    }
 }

@@ -7,7 +7,9 @@ import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +19,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +28,12 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.isledeer.soullink.data.ProviderConfig
+import com.isledeer.soullink.ui.chat.AttachBottomSheet
+import com.isledeer.soullink.ui.chat.ChatInputBar
+import com.isledeer.soullink.ui.chat.ToolsBottomSheet
+import com.isledeer.soullink.ui.chat.TopBarDropdownMenu
+import com.isledeer.soullink.ui.components.ModelPickerSheet
 import com.isledeer.soullink.util.DocumentParser
 import com.isledeer.soullink.util.ImageUtils
 import androidx.core.content.FileProvider
@@ -59,8 +69,11 @@ fun ChatScreen(
     onToggleAutoCompress: () -> Unit,
     onContinueGeneration: (String) -> Unit,
     onClearContext: () -> Unit,
-    quickPrompts: List<String>,
-    onQuickSend: (String) -> Unit,
+    toolStates: Map<String, Boolean>,
+    onToggleTool: (String) -> Unit,
+    providers: List<ProviderConfig>,
+    fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
+    onPickChatModel: (String) -> Unit,
     onRegenerate: (String) -> Unit,
     onDeleteMessage: (String) -> Unit,
     onEditMessage: (String, String) -> Unit,
@@ -82,6 +95,10 @@ fun ChatScreen(
     var actionsTarget by remember { mutableStateOf<ChatMessage?>(null) }
     var editTarget by remember { mutableStateOf<ChatMessage?>(null) }
     var consoleVisible by remember { mutableStateOf(false) }
+    var thinkingLevel by remember { mutableStateOf("OFF") }
+    var webSearch by remember { mutableStateOf(false) }
+    var toolsVisible by remember { mutableStateOf(false) }
+    var modelPickerVisible by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     val voice = remember { VoiceInput(context) }
@@ -201,8 +218,7 @@ fun ChatScreen(
                     title = current?.title ?: "SoulLink",
                     modelName = modelName,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
-                    onOpenSettings = { settingsVisible = true },
-                    onOpenConsole = { consoleVisible = true },
+                    onOpenMenu = { consoleVisible = true },
                 )
 
                 LazyColumn(
@@ -234,16 +250,24 @@ fun ChatScreen(
                     )
                 }
 
+                if (pendingImage != null) {
+                    PendingImagePreview(
+                        base64 = pendingImage!!,
+                        onClear = { pendingImage = null },
+                    )
+                }
+
                 ChatInputBar(
                     value = input,
                     onValueChange = { input = it },
                     isGenerating = isGenerating,
-                    pendingImage = pendingImage,
-                    onClearImage = { pendingImage = null },
-                    onOpenAttach = { attachVisible = true },
-                    quickPrompts = quickPrompts,
-                    onQuickSend = onQuickSend,
-                    onOpenConversationSettings = { settingsVisible = true },
+                    thinkingLevel = thinkingLevel,
+                    onThinkingLevelChange = { thinkingLevel = it },
+                    isWebSearchEnabled = webSearch,
+                    onToggleWebSearch = { webSearch = !webSearch },
+                    onModelClick = { modelPickerVisible = true },
+                    onToolsClick = { toolsVisible = true },
+                    onAttachClick = { attachVisible = true },
                     onVoiceInput = {
                         val granted = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.RECORD_AUDIO
@@ -256,6 +280,14 @@ fun ChatScreen(
                             )
                         } else {
                             requestRecord.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    onSlashCommand = { command ->
+                        when (command) {
+                            "/clear" -> onClearContext()
+                            "/compact" -> notice = "开发中"
+                            "/memory" -> notice = "开发中"
+                            "/thinking" -> notice = "请在下方调节"
                         }
                     },
                     onSend = {
@@ -271,45 +303,14 @@ fun ChatScreen(
         }
     }
     if (attachVisible) {
-        AttachSheet(
+        AttachBottomSheet(
             onDismiss = { attachVisible = false },
             onPickPhoto = {
                 pickImage.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
-            onVoice = {
-                val granted = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.RECORD_AUDIO
-                ) == PackageManager.PERMISSION_GRANTED
-                if (granted) {
-                    voice.listen(
-                        onPartial = { input = it },
-                        onResult = { input = it },
-                        onError = { notice = it },
-                    )
-                } else {
-                    requestRecord.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            },
-            onCamera = {
-                val dir = File(context.cacheDir, "images").apply { mkdirs() }
-                val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                cameraUri.value = uri
-                takePicture.launch(uri)
-            },
-            onDocument = {
-                pickDocument.launch(
-                    arrayOf(
-                        "application/pdf",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        "application/msword",
-                        "text/plain",
-                    )
-                )
-            },
-            onFile = { notice = "文件上传暂未开放" },
+            onFillInput = { text -> input = input + text },
         )
     }
 
@@ -352,26 +353,73 @@ fun ChatScreen(
     }
 
     if (consoleVisible) {
-        val toast: (String) -> Unit = { text ->
-            android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-        }
-        com.isledeer.soullink.ui.components.ChatConsoleMenu(
+        TopBarDropdownMenu(
             expanded = true,
             onDismiss = { consoleVisible = false },
             tokenUsage = tokenUsage,
             autoCompress = autoCompress,
-            onNewConversation = onNewConversation,
-            onSearch = { toast("会话内搜索开发中") },
-            onShare = { toast("分享 / 导出开发中") },
-            onClearConversation = { onClearContext() },
-            onOpenConversationSettings = { settingsVisible = true },
+            onNewChat = onNewConversation,
+            onClearContext = onClearContext,
+            onOpenSettings = { settingsVisible = true },
             onToggleAutoCompress = onToggleAutoCompress,
-            onMemory = { toast("记忆面板开发中") },
-            onSkills = { toast("技能面板开发中") },
-            onMcp = { toast("MCP 状态开发中") },
-            onMessageTree = { toast("消息树视图开发中") },
-            onRawDebug = { toast("RAW 面板开发中") },
         )
+    }
+
+    if (toolsVisible) {
+        ToolsBottomSheet(
+            toolStates = toolStates,
+            onToggleTool = onToggleTool,
+            onDismiss = { toolsVisible = false },
+        )
+    }
+
+    if (modelPickerVisible) {
+        ModelPickerSheet(
+            providers = providers,
+            fetchModels = fetchModels,
+            onPick = { model ->
+                onPickChatModel(model)
+                modelPickerVisible = false
+            },
+            onDismiss = { modelPickerVisible = false },
+        )
+    }
+}
+
+@Composable
+private fun PendingImagePreview(base64: String, onClear: () -> Unit) {
+    val bitmap = remember(base64) {
+        runCatching {
+            val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        }.getOrNull()
+    }
+    if (bitmap != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "待发送图片",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "✕ 移除",
+                color = GlassTokens.Accent,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onClear)
+                    .padding(6.dp),
+            )
+        }
     }
 }
 
