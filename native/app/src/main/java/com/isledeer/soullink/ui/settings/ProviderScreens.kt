@@ -37,6 +37,7 @@ import com.isledeer.soullink.ui.chat.BrandIcon
 import com.isledeer.soullink.ui.liquidGlass
 import kotlinx.coroutines.launch
 
+@Composable
 private fun headerBar(
     title: String,
     onBack: () -> Unit,
@@ -446,8 +447,8 @@ private fun AdvancedTab(
     provider: ProviderConfig,
     onChange: (ProviderConfig) -> Unit,
 ) {
-    var headers by remember(provider.id) { mutableStateOf(mapToLinesText(provider.headerMap())) }
-    var bodies by remember(provider.id) { mutableStateOf(mapToLinesText(provider.bodyMap())) }
+    var headers by remember(provider.id) { mutableStateOf(mapToLinesText(jsonMap(provider.customHeaders))) }
+    var bodies by remember(provider.id) { mutableStateOf(mapToLinesText(jsonMap(provider.customBodies))) }
 
     Column(
         modifier = Modifier
@@ -632,3 +633,8 @@ private fun linesTextToMap(text: String): String {
     }
     return json.toString()
 }
+
+private fun jsonMap(json: String): Map<String, String> = runCatching {
+    val obj = org.json.JSONObject(json)
+    obj.keys().asSequence().associateWith { key -> obj.optString(key) }
+}.getOrElse { emptyMap() }

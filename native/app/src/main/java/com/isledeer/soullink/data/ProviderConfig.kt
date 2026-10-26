@@ -24,6 +24,9 @@ data class ProviderConfig(
     val enabled: Boolean = true,
     /** API 路径（设置页展示用；请求实际走 /v1/chat/completions 与 /v1/models） */
     val apiPath: String = "/chat/completions",
+    /** 自定义请求头 / 请求体（JSON 对象字符串，高级设置 Tab 编辑） */
+    val customHeaders: String = "{}",
+    val customBodies: String = "{}",
 ) {
     fun modelList(): List<String> = AssistantEntity.parseStringArray(enabledModelsJson)
 }
@@ -112,6 +115,8 @@ data class AppSettings(
                                 enabledModelsJson = obj.optString("enabledModelsJson", "[]"),
                                 enabled = obj.optBoolean("enabled", true),
                                 apiPath = obj.optString("apiPath", "/chat/completions"),
+                                customHeaders = obj.optString("customHeaders", "{}"),
+                                customBodies = obj.optString("customBodies", "{}"),
                             )
                         )
                     }
