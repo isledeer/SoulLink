@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.isledeer.soullink.data.AppSettings
+import com.isledeer.soullink.ui.components.CardGroup
+import com.isledeer.soullink.ui.components.CardGroupItem
 import com.isledeer.soullink.data.Feature
 import com.isledeer.soullink.data.ProviderConfig
 
