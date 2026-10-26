@@ -1,18 +1,19 @@
 package com.isledeer.soullink.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import org.koin.androidx.compose.koinViewModel
 
 /**
- * 路由表。
- *
- * 目前只有两条：聊天（启动即进）与世界书（占位）。
- * 设置页等后续页往这里加，别在 Activity 里堆 if。
+ * 路由表。启动即进聊天；设置与世界书都是二级页。
  */
 object Routes {
     const val CHAT = "chat"
+    const val SETTINGS = "settings"
     const val WORLD_BOOK = "worldbook"
 }
 
@@ -26,14 +27,34 @@ fun SoulLinkApp() {
     ) {
         composable(Routes.CHAT) {
             ChatRoute(
-                onOpenWorldBook = { navController.navigate(Routes.WORLD_BOOK) }
+                onOpenWorldBook = { navController.navigate(Routes.WORLD_BOOK) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsRoute(
+                onBack = { navController.popBackStack() },
             )
         }
 
         composable(Routes.WORLD_BOOK) {
             WorldBookScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
             )
         }
     }
+}
+
+@Composable
+private fun SettingsRoute(onBack: () -> Unit) {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    SettingsScreen(
+        state = state,
+        onChange = { updated -> viewModel.update { updated } },
+        onSave = { viewModel.save() },
+        onBack = onBack,
+    )
 }

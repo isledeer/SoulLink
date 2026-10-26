@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -65,17 +66,10 @@ dependencies {
     // ---------- 协程 ----------
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // ------------------------------------------------------------------
-    // Room：等真正写数据层时再启用。现在启用会空跑注解处理器、拉长 CI。
-    // 启用时需要的三处改动：
-    //   1) 根 build.gradle.kts 的 plugins 里加：
-    //        id("com.google.devtools.ksp") version "2.0.21-1.0.28" apply false
-    //   2) 本文件 plugins 里加： id("com.google.devtools.ksp")
-    //   3) 解开下面两行：
-    // implementation("androidx.room:room-runtime:2.6.1")
-    // implementation("androidx.room:room-ktx:2.6.1")
-    // ksp("androidx.room:room-compiler:2.6.1")
-    // ------------------------------------------------------------------
+    // ---------- Room（消息落盘） ----------
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // ------------------------------------------------------------------
     // 液态玻璃：两条路都要升工具链，暂不启用（详见 ui/Glass.kt 注释）
