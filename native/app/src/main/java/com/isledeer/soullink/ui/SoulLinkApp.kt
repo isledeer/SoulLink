@@ -12,6 +12,8 @@ import androidx.navigation.navArgument
 import com.isledeer.soullink.ui.assistant.AssistantDetailScreen
 import com.isledeer.soullink.ui.assistant.AssistantListScreen
 import com.isledeer.soullink.ui.assistant.AssistantViewModel
+import com.isledeer.soullink.ui.settings.ProviderDetailScreen
+import com.isledeer.soullink.ui.settings.ProviderListScreen
 import com.isledeer.soullink.ui.settings.SearchServiceScreen
 import com.isledeer.soullink.ui.settings.SettingsOverviewScreen
 import kotlinx.coroutines.delay
@@ -25,6 +27,9 @@ object Routes {
     const val ASSISTANT_DETAIL = "assistant/{id}"
     const val PROVIDERS = "providers"
     const val SEARCH_SERVICE = "search_service"
+    const val PROVIDER_DETAIL = "provider/{id}"
+
+    fun providerDetail(id: String) = "provider/$id"
 
     fun assistantDetail(id: String) = "assistant/$id"
 }
@@ -55,7 +60,20 @@ fun SoulLinkApp() {
         }
 
         composable(Routes.PROVIDERS) {
-            SettingsRoute(onBack = { navController.popBackStack() })
+            ProviderListRoute(
+                onBack = { navController.popBackStack() },
+                onOpen = { id -> navController.navigate(Routes.providerDetail(id)) },
+            )
+        }
+
+        composable(
+            route = Routes.PROVIDER_DETAIL,
+            arguments = listOf(navArgument("id") { type = NavType.StringType }),
+        ) { entry ->
+            ProviderDetailRoute(
+                providerId = entry.arguments?.getString("id").orEmpty(),
+                onBack = { navController.popBackStack() },
+            )
         }
 
         composable(Routes.SEARCH_SERVICE) {
@@ -147,6 +165,59 @@ private fun SearchServiceRoute(onBack: () -> Unit) {
     SearchServiceScreen(
         keys = state.searchKeys,
         onChangeKey = viewModel::setSearchKey,
+        onSave = viewModel::save,
+        onBack = onBack,
+    )
+}
+
+@Composable
+private fun ProviderListRoute(
+    onBack: () -> Unit,
+    onOpen: (String) -> Unit,
+) {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val fetchedModels by viewModel.fetchedModels.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
+    ProviderListScreen(
+        providers = state.providers,
+        modelCounts = fetchedModels.mapValues { it.value.size },
+        onBack = onBack,
+        onAdd = viewModel::addProvider,
+        onOpen = onOpen,
+        onDelete = viewModel::removeProvider,
+        onSave = viewModel::save,
+    )
+}
+
+@Composable
+private fun ProviderDetailRoute(
+    providerId: String,
+    onBack: () -> Unit,
+) {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val fetchedModels by viewModel.fetchedModels.collectAsStateWithLifecycle()
+    val testingId by viewModel.testing.collectAsStateWithLifecycle()
+    val testResult by viewModel.testResult.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
+    val provider = state.providers.firstOrNull { it.id == providerId }
+    if (provider == null) {
+        return
+    }
+
+    ProviderDetailScreen(
+        provider = provider,
+        fetchedModels = fetchedModels[providerId].orEmpty(),
+        testResult = if (testingId == providerId) testResult else null,
+        testing = testingId == providerId,
+        onChange = viewModel::updateProvider,
+        onTest = { viewModel.test(provider) },
+        fetchModels = { viewModel.fetchModels(provider) },
         onSave = viewModel::save,
         onBack = onBack,
     )

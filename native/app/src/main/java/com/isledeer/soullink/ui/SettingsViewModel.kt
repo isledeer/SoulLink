@@ -11,6 +11,7 @@ import com.isledeer.soullink.net.SseClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -44,6 +45,12 @@ class SettingsViewModel(
             repository.flow.collect { stored ->
                 _state.value = stored
             }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            repository.flow.first()?.let { _state.value = it }
         }
     }
 

@@ -20,6 +20,10 @@ data class ProviderConfig(
     val balanceJsonPath: String = "",
     /** 用户勾选启用的模型（JSON 数组字符串，访问用 modelList()） */
     val enabledModelsJson: String = "[]",
+    /** Provider 级启用开关 */
+    val enabled: Boolean = true,
+    /** API 路径（设置页展示用；请求实际走 /v1/chat/completions 与 /v1/models） */
+    val apiPath: String = "/chat/completions",
 ) {
     fun modelList(): List<String> = AssistantEntity.parseStringArray(enabledModelsJson)
 }
@@ -106,6 +110,8 @@ data class AppSettings(
                                 balanceUrl = obj.optString("balanceUrl"),
                                 balanceJsonPath = obj.optString("balanceJsonPath"),
                                 enabledModelsJson = obj.optString("enabledModelsJson", "[]"),
+                                enabled = obj.optBoolean("enabled", true),
+                                apiPath = obj.optString("apiPath", "/chat/completions"),
                             )
                         )
                     }

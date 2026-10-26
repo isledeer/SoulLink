@@ -84,8 +84,8 @@ class ChatViewModel(
 
     private fun refreshModelName() {
         val assistant = _currentAssistant.value
-        val global = _settings.value.modelFor(Feature.CHAT)
-        _currentModelName.value = assistant?.chatModelId?.takeIf { it.isNotBlank() } ?: global.takeIf { it.isNotBlank() }
+        val global = _settings.value.bindings[Feature.CHAT]?.model
+        _currentModelName.value = assistant?.chatModelId?.takeIf { it.isNotBlank() } ?: global?.takeIf { it.isNotBlank() }
     }
 
     fun setThinkingLevel(level: String) {
