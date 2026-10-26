@@ -246,10 +246,12 @@ fun ProviderDetailScreen(
                 }
             }
 
-            when (tab) {
-                0 -> ConfigTab(provider, keyVisible, { keyVisible = !keyVisible }, onChange, onTest, testResult, testing)
-                1 -> ModelsTab(provider, fetchedModels, onChange, { fetchSheet = true }, { addDialog = true })
-                2 -> AdvancedTab(provider, onChange)
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when (tab) {
+                    0 -> ConfigTab(provider, keyVisible, { keyVisible = !keyVisible }, onChange, onTest, testResult, testing)
+                    1 -> ModelsTab(provider, fetchedModels, onChange, { fetchSheet = true }, { addDialog = true })
+                    2 -> AdvancedTab(provider, onChange)
+                }
             }
         }
 
@@ -314,7 +316,6 @@ private fun ConfigTab(
 ) {
     Column(
         modifier = Modifier
-            .weight(1f)
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(top = 12.dp)
@@ -366,7 +367,7 @@ private fun ModelsTab(
     onOpenFetch: () -> Unit,
     onOpenAdd: () -> Unit,
 ) {
-    Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(vertical = 12.dp),
@@ -452,7 +453,6 @@ private fun AdvancedTab(
 
     Column(
         modifier = Modifier
-            .weight(1f)
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(top = 12.dp)
