@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -209,7 +210,7 @@ fun ChatScreen(
             }
         },
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
@@ -217,8 +218,9 @@ fun ChatScreen(
                         listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
                     )
                 )
+                .statusBarsPadding()
+                .imePadding()
         ) {
-            Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
                 ChatTopBar(
                     title = current?.title ?: "SoulLink",
                     modelName = modelName,
@@ -309,7 +311,6 @@ fun ChatScreen(
                     },
                     onStop = onStop,
                 )
-            }
         }
     }
     if (attachVisible) {
