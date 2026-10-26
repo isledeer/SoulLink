@@ -81,7 +81,7 @@ class LocalTools(private val context: Context) {
                 JSONObject().put("prompt", JSONObject().put("type", "string"))
             ),
         outputImage = true,
-        executor = suspend { args: JSONObject ->
+        executor = { args: JSONObject ->
             val prompt = args.optString("prompt")
             if (prompt.isBlank()) {
                 "缺少 prompt 参数"
