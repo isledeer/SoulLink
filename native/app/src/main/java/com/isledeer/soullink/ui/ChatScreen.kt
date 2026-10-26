@@ -59,6 +59,8 @@ fun ChatScreen(
     onToggleAutoCompress: () -> Unit,
     onContinueGeneration: (String) -> Unit,
     onClearContext: () -> Unit,
+    quickPrompts: List<String>,
+    onQuickSend: (String) -> Unit,
     onRegenerate: (String) -> Unit,
     onDeleteMessage: (String) -> Unit,
     onEditMessage: (String, String) -> Unit,
@@ -76,7 +78,6 @@ fun ChatScreen(
     var input by remember { mutableStateOf("") }
     var pendingImage by remember { mutableStateOf<String?>(null) }
     var attachVisible by remember { mutableStateOf(false) }
-    var quickVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var actionsTarget by remember { mutableStateOf<ChatMessage?>(null) }
     var editTarget by remember { mutableStateOf<ChatMessage?>(null) }
@@ -240,7 +241,8 @@ fun ChatScreen(
                     pendingImage = pendingImage,
                     onClearImage = { pendingImage = null },
                     onOpenAttach = { attachVisible = true },
-                    onOpenQuickPrompts = { quickVisible = true },
+                    quickPrompts = quickPrompts,
+                    onQuickSend = onQuickSend,
                     onOpenConversationSettings = { settingsVisible = true },
                     onVoiceInput = {
                         val granted = ContextCompat.checkSelfPermission(
@@ -309,10 +311,6 @@ fun ChatScreen(
             },
             onFile = { notice = "文件上传暂未开放" },
         )
-    }
-
-    if (quickVisible) {
-        QuickPromptsSheet(onDismiss = { quickVisible = false }, onPick = { input = it })
     }
 
     actionsTarget?.let { target ->

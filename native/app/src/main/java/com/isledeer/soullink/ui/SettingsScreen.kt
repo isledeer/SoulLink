@@ -1,5 +1,6 @@
 package com.isledeer.soullink.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,12 +14,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.window.Dialog
+import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -45,10 +50,16 @@ fun SettingsScreen(
     onSetBinding: (Feature, String, String) -> Unit,
     onTest: (ProviderConfig) -> Unit,
     fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
+    fetchedModels: Map<String, List<String>>,
+    balanceText: String?,
+    onFetchModels: (ProviderConfig) -> Unit,
+    onQueryBalance: (ProviderConfig) -> Unit,
+    onImportConfig: (String) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
     var pickerFeature by remember { mutableStateOf<Feature?>(null) }
+    var shareVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -103,9 +114,13 @@ fun SettingsScreen(
                     ProviderCard(
                         provider = provider,
                         testing = testingProviderId == provider.id,
+                        fetchedModels = fetchedModels[provider.id].orEmpty(),
+                        balanceText = if (testingProviderId == provider.id) balanceText else null,
                         onChange = onUpdateProvider,
                         onRemove = { onRemoveProvider(provider.id) },
                         onTest = { onTest(provider) },
+                        onFetchModels = { onFetchModels(provider) },
+                        onQueryBalance = { onQueryBalance(provider) },
                     )
                 }
 
@@ -128,6 +143,15 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text("＋ 添加提供商", color = GlassTokens.Primary, fontSize = 13.sp)
+                }
+
+                balanceText?.let { text ->
+                    Text(
+                        text = "余额：$text",
+                        color = GlassTokens.Primary,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+                    )
                 }
 
                 testResult?.let { result ->
@@ -153,6 +177,20 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(20.dp))
 
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(GlassTokens.Primary.copy(alpha = 0.16f))
+                        .clickable { shareVisible = true }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text("分享 / 导入配置（二维码）", color = GlassTokens.Primary, fontSize = 13.sp)
+                }
+
+                Spacer(Modifier.height(10.dp))
+
                 Button(
                     onClick = onSave,
                     shape = RoundedCornerShape(16.dp),
@@ -173,6 +211,75 @@ fun SettingsScreen(
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 10.dp, bottom = 28.dp),
                 )
+            }
+        }
+
+        if (shareVisible) {
+            val clipboard = LocalClipboardManager.current
+            var importText by remember { mutableStateOf("") }
+            Dialog(onDismissRequest = { shareVisible = false }) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(cornerRadius = GlassTokens.PanelRadius)
+                        .background(GlassTokens.BackgroundBottom.copy(alpha = 0.96f))
+                        .padding(18.dp)
+                ) {
+                    Text("配置分享", color = GlassTokens.TextPrimary, fontSize = 15.sp)
+                    Spacer(Modifier.height(12.dp))
+
+                    qrBitmap(state.toJson())?.let { bitmap ->
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "配置二维码",
+                            modifier = Modifier
+                                .size(220.dp)
+                                .align(Alignment.CenterHorizontally),
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        TextButton(
+                            onClick = { clipboard.setText(AnnotatedString(state.toJson())) },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("复制 JSON", color = GlassTokens.Primary) }
+                        TextButton(
+                            onClick = { shareVisible = false },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("关闭", color = GlassTokens.TextSecondary) }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = importText,
+                        onValueChange = { importText = it },
+                        minLines = 3,
+                        maxLines = 6,
+                        shape = RoundedCornerShape(14.dp),
+                        placeholder = {
+                            Text("粘贴配置 JSON 后点导入", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f))
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0x14FFFFFF),
+                            unfocusedContainerColor = Color(0x0DFFFFFF),
+                            focusedTextColor = GlassTokens.TextPrimary,
+                            unfocusedTextColor = GlassTokens.TextPrimary,
+                            cursorColor = GlassTokens.Primary,
+                            focusedIndicatorColor = GlassTokens.Primary.copy(alpha = 0.6f),
+                            unfocusedIndicatorColor = Color(0x1FFFFFFF),
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    TextButton(
+                        onClick = {
+                            onImportConfig(importText)
+                            shareVisible = false
+                        },
+                    ) { Text("导入", color = GlassTokens.Primary) }
+                }
             }
         }
 
@@ -211,9 +318,13 @@ private fun SectionTitle(text: String) {
 private fun ProviderCard(
     provider: ProviderConfig,
     testing: Boolean,
+    fetchedModels: List<String>,
+    balanceText: String?,
     onChange: (ProviderConfig) -> Unit,
     onRemove: () -> Unit,
     onTest: () -> Unit,
+    onFetchModels: () -> Unit,
+    onQueryBalance: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -256,8 +367,32 @@ private fun ProviderCard(
             onValueChange = { onChange(provider.copy(apiKey = it)) },
         )
 
+        if (fetchedModels.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "模型（${fetchedModels.size}）：${fetchedModels.joinToString("、")}",
+                color = GlassTokens.TextSecondary.copy(alpha = 0.75f),
+                fontSize = 10.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        SettingsInput(
+            value = provider.balanceUrl,
+            placeholder = "余额查询 URL（留空不启用）",
+            onValueChange = { onChange(provider.copy(balanceUrl = it)) },
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsInput(
+            value = provider.balanceJsonPath,
+            placeholder = "余额 JSON 路径（如 data.balance）",
+            onValueChange = { onChange(provider.copy(balanceJsonPath = it)) },
+        )
+
         Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
                 text = if (testing) "测试中…" else "测试连通性",
                 color = GlassTokens.Primary,
@@ -265,6 +400,24 @@ private fun ProviderCard(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .clickable(enabled = !testing, onClick = onTest)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+            Text(
+                text = "拉取模型",
+                color = GlassTokens.Primary,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onFetchModels() }
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+            Text(
+                text = "查余额",
+                color = GlassTokens.Primary,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onQueryBalance() }
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             )
         }
@@ -389,6 +542,8 @@ fun SettingsRoute(onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val testingId by viewModel.testing.collectAsStateWithLifecycle()
     val testResult by viewModel.testResult.collectAsStateWithLifecycle()
+    val fetchedModels by viewModel.fetchedModels.collectAsStateWithLifecycle()
+    val balanceText by viewModel.balanceText.collectAsStateWithLifecycle()
 
     SettingsScreen(
         state = state,
@@ -402,7 +557,26 @@ fun SettingsRoute(onBack: () -> Unit) {
         },
         onTest = viewModel::test,
         fetchModels = viewModel::fetchModels,
+        fetchedModels = fetchedModels,
+        balanceText = balanceText,
+        onFetchModels = viewModel::fetchModelList,
+        onQueryBalance = viewModel::queryBalance,
+        onImportConfig = viewModel::importConfig,
         onSave = viewModel::save,
         onBack = onBack,
     )
 }
+
+/** 生成配置二维码位图（ZXing core） */
+private fun qrBitmap(content: String, size: Int = 512): Bitmap? = runCatching {
+    val matrix = com.google.zxing.qrcode.QRCodeWriter().encode(
+        content, com.google.zxing.BarcodeFormat.QR_CODE, size, size
+    )
+    Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(x, y, if (matrix.get(x, y)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt())
+            }
+        }
+    }
+}.getOrNull()

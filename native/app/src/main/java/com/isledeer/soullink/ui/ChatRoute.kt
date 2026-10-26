@@ -42,6 +42,8 @@ fun ChatRoute(
         onToggleAutoCompress = viewModel::toggleAutoCompress,
         onContinueGeneration = viewModel::continueGeneration,
         onClearContext = viewModel::clearContext,
+        quickPrompts = viewModel.currentAssistant.value?.promptList().orEmpty(),
+        onQuickSend = { prompt -> viewModel.send(prompt, null) },
         onRegenerate = viewModel::regenerate,
         onDeleteMessage = viewModel::deleteMessage,
         onEditMessage = viewModel::editMessage,

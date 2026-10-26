@@ -21,6 +21,7 @@ sealed interface SseEvent {
     data class Content(val text: String) : SseEvent
     data class Reasoning(val text: String) : SseEvent
     data class Usage(val promptTokens: Int, val completionTokens: Int) : SseEvent
+    data class ToolCall(val id: String, val name: String, val arguments: String) : SseEvent
     data object Done : SseEvent
 }
 
@@ -29,6 +30,8 @@ data class ChatTurn(
     val role: String,
     val content: String,
     val imageBase64: String? = null,
+    /** role == "tool" 时携带，回填给 API */
+    val toolCallId: String? = null,
 )
 
 data class ChatRequest(
@@ -49,6 +52,12 @@ data class ChatRequest(
     val includeUsage: Boolean = true,
 )
 
+private class ToolFragment {
+    var id: String = ""
+    var name: String = ""
+    val args = StringBuilder()
+}
+
 /**
  * 原生 SSE 客户端。callbackFlow 保证可取消：collector 取消 → awaitClose 里 call.cancel()
  * → 阻塞读立刻退出，这就是「停止」按钮的实现。
@@ -63,6 +72,9 @@ class SseClient(
         val call = client.newCall(buildRequest(request))
 
         val reader = launch(Dispatchers.IO) {
+            // tool_calls 参数跨 chunk 累积（按 index 分片）
+            val toolFragments = mutableMapOf<Int, ToolFragment>()
+
             fun emitFromEvent(lines: List<String>) {
                 for (raw in lines) {
                     val line = raw.trim()
@@ -94,6 +106,27 @@ class SseClient(
 
                     if (reasoning.isNotEmpty()) trySend(SseEvent.Reasoning(reasoning))
                     if (content.isNotEmpty()) trySend(SseEvent.Content(content))
+
+                    // 流式 tool_calls：arguments 可能分片，按 index 累积
+                    val toolCalls = delta.optJSONArray("tool_calls") ?: continue
+                    for (ti in 0 until toolCalls.length()) {
+                        val call = toolCalls.optJSONObject(ti) ?: continue
+                        val index = call.optInt("index", 0)
+                        val fragment = toolFragments.getOrPut(index) { ToolFragment() }
+                        call.optString("id").takeIf { it.isNotBlank() }?.let { fragment.id = it }
+                        call.optJSONObject("function")?.let { fn ->
+                            fn.optString("name").takeIf { it.isNotBlank() }?.let { fragment.name = it }
+                            fn.optString("arguments").takeIf { it.isNotBlank() }?.let { fragment.args.append(it) }
+                        }
+                        // 参数凑成完整 JSON 才发出一次调用
+                        if (fragment.id.isNotBlank() && fragment.name.isNotBlank() && fragment.args.isNotBlank()) {
+                            val complete = runCatching { JSONObject(fragment.args.toString()) }.isSuccess
+                            if (complete) {
+                                trySend(SseEvent.ToolCall(fragment.id, fragment.name, fragment.args.toString()))
+                                toolFragments.remove(index)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -136,6 +169,47 @@ class SseClient(
             reader.cancel()
         }
     }
+
+    /** 通用 GET（余额等查询）：返回原始 JSON 文本 */
+    suspend fun fetchJson(url: String, apiKey: String): String = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("HTTP ${response.code}")
+            }
+            response.body?.string().orEmpty()
+        }
+    }
+
+    /** DALL·E 风格生图：POST /v1/images/generations（b64_json），返回 base64 */
+    suspend fun generateImage(baseUrl: String, apiKey: String, prompt: String): String? =
+        withContext(Dispatchers.IO) {
+            val body = JSONObject()
+                .put("model", "dall-e-3")
+                .put("prompt", prompt)
+                .put("n", 1)
+                .put("size", "1024x1024")
+                .put("response_format", "b64_json")
+
+            val request = Request.Builder()
+                .url(imagesUrl(baseUrl))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $apiKey")
+                .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val root = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
+                    ?: return@withContext null
+                root.optJSONArray("data")?.optJSONObject(0)?.optString("b64_json")
+                    ?.takeIf { it.isNotBlank() }
+            }
+        }
 
     /** 拉取该 provider 的模型列表（/v1/models → data[].id） */
     suspend fun fetchModels(baseUrl: String, apiKey: String): List<String> = withContext(Dispatchers.IO) {
@@ -189,6 +263,9 @@ class SseClient(
 
         req.turns.forEach { turn ->
             val message = JSONObject().put("role", turn.role)
+            if (turn.role == "tool" && !turn.toolCallId.isNullOrBlank()) {
+                message.put("tool_call_id", turn.toolCallId)
+            }
             val image = turn.imageBase64
             if (image.isNullOrBlank()) {
                 message.put("content", turn.content)
@@ -266,6 +343,13 @@ class SseClient(
             var clean = baseUrl.trim().trimEnd('/')
             if (clean.endsWith("/v1")) clean = clean.dropLast(3)
             return "$clean/v1/chat/completions"
+        }
+
+        /** 生图端点 */
+        fun imagesUrl(baseUrl: String): String {
+            var clean = baseUrl.trim().trimEnd('/')
+            if (clean.endsWith("/v1")) clean = clean.dropLast(3)
+            return "$clean/v1/images/generations"
         }
 
         /** 连通性测试用：GET /v1/models */

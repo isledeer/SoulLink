@@ -15,6 +15,9 @@ data class ProviderConfig(
     val name: String,
     val baseUrl: String,
     val apiKey: String,
+    /** 余额查询端点（留空则不支持）；path 为点分 JSON 路径 */
+    val balanceUrl: String = "",
+    val balanceJsonPath: String = "",
 )
 
 data class FeatureBinding(
@@ -93,6 +96,8 @@ data class AppSettings(
                                 name = obj.optString("name"),
                                 baseUrl = obj.optString("baseUrl"),
                                 apiKey = obj.optString("apiKey"),
+                                balanceUrl = obj.optString("balanceUrl"),
+                                balanceJsonPath = obj.optString("balanceJsonPath"),
                             )
                         )
                     }

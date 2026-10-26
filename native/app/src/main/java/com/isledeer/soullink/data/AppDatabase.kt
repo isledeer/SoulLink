@@ -12,8 +12,8 @@ import androidx.room.RoomDatabase
         MessageNodeEntity::class,
         UIMessageEntity::class,
     ],
-    // v3：多智能体 + 消息树。破坏性迁移，旧数据清空。
-    version = 3,
+    // v4：助手新增快捷短语字段。破坏性迁移，旧数据清空。
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

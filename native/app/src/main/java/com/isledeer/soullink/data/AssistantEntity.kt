@@ -40,6 +40,8 @@ data class AssistantEntity(
     val customBodies: String = "{}",
     val workspaceId: String? = null,
     val enableWebSearch: Boolean = false,
+    /** 快捷短语（JSON 数组），显示在输入框上方 */
+    val quickPrompts: String = "[]",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
@@ -47,6 +49,7 @@ data class AssistantEntity(
     fun toolList(): List<String> = parseStringArray(localTools)
     fun mcpList(): List<String> = parseStringArray(mcpServers)
     fun skillList(): List<String> = parseStringArray(enabledSkills)
+    fun promptList(): List<String> = parseStringArray(quickPrompts)
     fun headerMap(): Map<String, String> = parseStringMap(customHeaders)
     fun bodyMap(): Map<String, String> = parseStringMap(customBodies)
 

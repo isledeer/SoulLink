@@ -6,6 +6,8 @@ import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -395,21 +397,28 @@ fun ChatInputBar(
             }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            horizontalArrangement = Arrangement.Start,
-        ) {
-            Text(
-                text = "快捷短语",
-                color = GlassTokens.TextSecondary.copy(alpha = 0.55f),
-                fontSize = 10.sp,
+        if (quickPrompts.isNotEmpty()) {
+            Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable(onClick = onOpenQuickPrompts)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
+                    .fillMaxWidth()
+                    .padding(top = 6.dp)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                quickPrompts.take(8).forEach { prompt ->
+                    Text(
+                        text = prompt,
+                        color = GlassTokens.TextSecondary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(GlassTokens.Primary.copy(alpha = 0.10f))
+                            .clickable { onQuickSend(prompt) }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
+            }
         }
     }
 }

@@ -78,8 +78,21 @@ class ChatViewModel(
     private var streamJob: Job? = null
     private var streamingId: String? = null
 
+    /** 流式中途的新消息队列：当前流结束后自动发出 */
+    private val pendingSends = ArrayDeque<Pair<String, String?>>()
+
     init {
-        viewModelScope.launch { settingsRepository.flow.collect { _settings.value = it } }
+        viewModelScope.launch {
+            settingsRepository.flow.collect { settings ->
+                _settings.value = settings
+                val provider = settings.providerFor(Feature.CHAT)
+                tools.imageGenerator = if (provider != null && provider.baseUrl.isNotBlank()) {
+                    { prompt -> sse.generateImage(provider.baseUrl, provider.apiKey, prompt) }
+                } else {
+                    null
+                }
+            }
+        }
         viewModelScope.launch { bootstrap() }
     }
 
@@ -175,7 +188,11 @@ class ChatViewModel(
 
     fun send(text: String, imageBase64: String? = null) {
         val conv = _current.value ?: return
-        if (_isGenerating.value) return
+        if (_isGenerating.value) {
+            // 队列控制：不打断当前流，排到队尾（上限 10 条防爆）
+            if (pendingSends.size < 10) pendingSends.addLast(text.trim() to imageBase64)
+            return
+        }
         if (text.isBlank() && imageBase64 == null) return
 
         viewModelScope.launch {
@@ -398,40 +415,64 @@ class ChatViewModel(
         streamJob = viewModelScope.launch {
             var finalText = ""
             var finalReasoning = ""
+            var finalImage: String? = null
             try {
-                sse.stream(
-                    ChatRequest(
-                        baseUrl = config.provider?.baseUrl.orEmpty(),
-                        apiKey = config.provider?.apiKey.orEmpty(),
-                        model = config.model,
-                        turns = turns,
-                        systemPrompt = config.systemPrompt,
-                        maxTokens = config.maxTokens,
-                        temperature = config.temperature,
-                        topP = config.topP,
-                        toolSchemas = toolSchemas(config.tools),
-                        extraHeaders = config.headers,
-                        extraBody = config.bodyExtras,
-                    )
-                ).collect { event ->
-                    when (event) {
-                        is SseEvent.Content -> {
-                            finalText += event.text
-                            receivedChars += event.text.length
-                            patchMessage(messageId) { it.copy(text = finalText) }
-                        }
+                // 工具环路：模型发 tool_calls -> 本地执行 -> 回填 -> 自动续流（上限 MAX_TOOL_ROUNDS 轮）
+                var turnsInFlight = turns
+                var round = 0
+                while (round < MAX_TOOL_ROUNDS) {
+                    val toolCalls = mutableListOf<SseEvent.ToolCall>()
 
-                        is SseEvent.Reasoning -> {
-                            finalReasoning += event.text
-                            patchMessage(messageId) { it.copy(reasoning = finalReasoning) }
-                        }
+                    sse.stream(
+                        ChatRequest(
+                            baseUrl = config.provider?.baseUrl.orEmpty(),
+                            apiKey = config.provider?.apiKey.orEmpty(),
+                            model = config.model,
+                            turns = turnsInFlight,
+                            systemPrompt = config.systemPrompt,
+                            maxTokens = config.maxTokens,
+                            temperature = config.temperature,
+                            topP = config.topP,
+                            toolSchemas = toolSchemas(config.tools),
+                            extraHeaders = config.headers,
+                            extraBody = config.bodyExtras,
+                        )
+                    ).collect { event ->
+                        when (event) {
+                            is SseEvent.Content -> {
+                                finalText += event.text
+                                receivedChars += event.text.length
+                                patchMessage(messageId) { it.copy(text = finalText) }
+                            }
 
-                        is SseEvent.Usage -> if (event.completionTokens > 0) {
-                            usageTokens = event.completionTokens
-                        }
+                            is SseEvent.Reasoning -> {
+                                finalReasoning += event.text
+                                patchMessage(messageId) { it.copy(reasoning = finalReasoning) }
+                            }
 
-                        SseEvent.Done -> Unit
+                            is SseEvent.Usage -> if (event.completionTokens > 0) {
+                                usageTokens = event.completionTokens
+                            }
+
+                            is SseEvent.ToolCall -> toolCalls.add(event)
+
+                            SseEvent.Done -> Unit
+                        }
                     }
+
+                    if (toolCalls.isEmpty()) break
+
+                    // 执行并回填 role:"tool" 消息
+                    for (call in toolCalls) {
+                        val result = executeToolCall(messageId, call)
+                        if (result.imageBase64 != null) finalImage = result.imageBase64
+                        turnsInFlight = turnsInFlight + ChatTurn(
+                            role = "tool",
+                            content = result.content,
+                            toolCallId = result.toolCallId,
+                        )
+                    }
+                    round++
                 }
             } catch (e: CancellationException) {
                 // 用户停止：保留已生成
@@ -449,7 +490,7 @@ class ChatViewModel(
                         id = messageId,
                         nodeId = nodeId,
                         role = Role.Assistant.apiName,
-                        parts = MessageParts.encode(finalText, null),
+                        parts = MessageParts.encode(finalText, finalImage),
                         reasoning = finalReasoning.ifBlank { null },
                         usageTokens = tokens,
                         generationSpeed = speed,
@@ -468,6 +509,11 @@ class ChatViewModel(
                     list.map {
                         if (it.id == conversation.id) it.copy(updatedAt = System.currentTimeMillis()) else it
                     }.sortedByDescending { it.updatedAt }
+                }
+
+                // 队列里有货：自动发下一条
+                pendingSends.removeFirstOrNull()?.let { (queuedText, queuedImage) ->
+                    send(queuedText, queuedImage)
                 }
             }
         }
@@ -546,7 +592,45 @@ class ChatViewModel(
         )
     }
 
+    /**
+     * 执行一次工具调用，返回回填给 API 的 tool turn。
+     * 生图类工具：base64 写进消息图片区，tool 回填内容用小文本。
+     */
+    private suspend fun executeToolCall(
+        messageId: String,
+        call: SseEvent.ToolCall,
+    ): ToolTurnResult {
+        val tool = tools.byName(call.name)
+        val result = if (tool == null) {
+            "未知工具：${call.name}"
+        } else {
+            runCatching {
+                val args = runCatching { JSONObject(call.arguments) }.getOrDefault(JSONObject())
+                tool.executor(args)
+            }.getOrElse { "工具执行失败：${it.message ?: "未知错误"}" }
+        }
+
+        if (tool != null && tool.outputImage && result.isNotBlank() &&
+            !result.startsWith("生图") && !result.startsWith("缺少") && !result.startsWith("未知")
+        ) {
+            patchMessage(messageId) { it.copy(imageBase64 = result) }
+            return ToolTurnResult(call.id, "图片已生成，显示在回复中", null)
+        }
+        return ToolTurnResult(call.id, result, null)
+    }
+
     private fun newId(): String = "${System.currentTimeMillis()}-${Random.nextInt(1000, 9999)}"
+
+    private data class ToolTurnResult(
+        val toolCallId: String,
+        val content: String,
+        val imageBase64: String?,
+    )
+
+    companion object {
+        /** 单轮用户消息最多允许的工具往返次数（首轮 + 3 次工具续流） */
+        private const val MAX_TOOL_ROUNDS = 4
+    }
 
     private fun ConversationEntity.toUi() = Conversation(
         id = id,
