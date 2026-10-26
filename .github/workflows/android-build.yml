@@ -16,6 +16,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # ---------- Web 内核 ----------
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -27,9 +28,10 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
-    - name: Build Web Assets
+    - name: Build web assets (dist/)
       run: pnpm run build
 
+    # ---------- 原生外壳 ----------
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -37,18 +39,23 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Accept Android SDK licenses and install build-tools
+    - name: Ensure Android SDK components
       run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        yes | sdkmanager --licenses > /dev/null 2>&1 || true
+        sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
 
-    - name: Grant execute permission for gradlew
+    - name: Build native APK
       working-directory: ./native
-      run: chmod +x gradlew
+      # 注意用 sh：仓库里 gradlew 的 exec 位在 Android 存储上不生效，可能被提交成 644
+      run: sh gradlew assembleDebug --no-daemon --stacktrace
 
-    - name: Build Android APK
-      working-directory: ./native
-      run: ./gradlew assembleDebug
+    # 防呆：syncDist 会删掉占位页再拷 dist。这里再验一次，
+    # 确保 APK 里装的是真内核而不是「内核未同步」的 1878 字节占位页。
+    - name: Verify web core packed
+      run: |
+        ls -la native/app/src/main/assets/ | head -20
+        test -f native/app/src/main/assets/index.html
+        test -d native/app/src/main/assets/assets
 
     - name: Upload APK as Artifact
       uses: actions/upload-artifact@v4
@@ -60,5 +67,5 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: native-build-${{ github.run_number }}
+        tag_name: build-${{ github.run_number }}
         files: native/app/build/outputs/apk/debug/app-debug.apk

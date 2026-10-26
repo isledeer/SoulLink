@@ -201,7 +201,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-surface-0 dark:bg-surface-900">
+    <div className="app-shell text-text-primary dark:text-surface-100">
       {/* 点击下拉框外部关闭：透明遮罩层级 z-40，位于下拉菜单（z-50）之下 */}
       {showModelMenu && (
         <div
@@ -210,78 +210,101 @@ export default function Chat() {
         />
       )}
 
-      <header className="flex items-center gap-1.5 px-2 py-2 border-b border-surface-200 dark:border-surface-700">
-        <Button variant="ghost" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => navigate('/')}>
-          ← 返回
-        </Button>
-        <h1 className="flex-1 min-w-0 font-semibold truncate text-text-primary dark:text-surface-100">
-          {displayName}
-        </h1>
+      <header className="shrink-0 flex items-center gap-1.5 h-14 px-2 border-b border-white/5 bg-surface-900/55 backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          aria-label="返回"
+          className="shrink-0 h-9 w-9 flex items-center justify-center rounded-full text-lg text-surface-300 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+        >
+          ←
+        </button>
 
-        {/* 模型切换：点击展开下拉，选项来自 settings store 的 availableModels */}
-        <div className="relative z-50 shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowModelMenu((v) => !v)}
-            title={modelName}
-            className="flex items-center gap-1 max-w-[6rem] shrink-0 text-xs text-text-secondary
-                       px-2 py-1 rounded border border-surface-300 dark:border-surface-700
-                       hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+        <div className="flex-1 min-w-0">
+          <h1 className="truncate text-[15px] font-semibold leading-tight">
+            {displayName}
+          </h1>
+          <p className="truncate text-[10px] leading-tight text-surface-300/70">
+            {affinity} · {levelLabel}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowModelMenu(true)}
+          title={modelName}
+          className="shrink-0 max-w-[8.5rem] flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-surface-300 hover:bg-white/10 active:scale-95 transition-colors"
+        >
+          <span className="truncate">{modelName || '未设置模型'}</span>
+          <span aria-hidden="true" className="text-[8px] opacity-60">▼</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowSaves(true)}
+          className="shrink-0 h-9 px-2.5 rounded-full text-xs text-surface-300 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+        >
+          存档
+        </button>
+      </header>
+
+      {/* 模型选择：毛玻璃底部抽屉 */}
+      {showModelMenu && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowModelMenu(false)}
+        >
+          <div
+            className="max-h-[70vh] overflow-y-auto rounded-t-3xl border-t border-white/10 bg-surface-900/90 p-4 pb-8 backdrop-blur-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <span className="truncate">{modelName || '未设置模型'}</span>
-            <span aria-hidden="true">▼</span>
-          </button>
-
-          {showModelMenu && (
-            <div
-              className="absolute right-0 top-full mt-1 w-56 max-h-64 overflow-y-auto
-                         rounded-lg shadow-lg z-50
-                         bg-surface-100 dark:bg-surface-800
-                         border border-surface-200 dark:border-surface-700"
-            >
-              {availableModels.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-text-secondary dark:text-surface-300">
-                  暂无模型，请到设置页点「拉取模型」
-                </div>
-              ) : (
-                availableModels.map((m) => (
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/15" />
+            <h2 className="px-1 pb-2 text-[11px] font-medium tracking-wide text-surface-300">
+              选择模型
+            </h2>
+            {availableModels.length === 0 ? (
+              <p className="px-1 py-8 text-center text-xs text-surface-300/70">
+                暂无模型，请到设置页点「拉取模型」
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {availableModels.map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => handlePickModel(m)}
                     className={[
-                      'block w-full text-left px-3 py-2 text-xs truncate transition-colors',
+                      'flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors',
                       m === modelName
-                        ? 'bg-primary-600 text-white'
-                        : 'text-text-primary dark:text-surface-100 hover:bg-surface-200 dark:hover:bg-surface-700',
+                        ? 'bg-primary-500/15 text-primary-100'
+                        : 'text-surface-100 hover:bg-white/5',
                     ].join(' ')}
                   >
-                    {m}
+                    <span className="truncate">{m}</span>
+                    {m === modelName && <span className="shrink-0 text-primary-500">✓</span>}
                   </button>
-                ))
-              )}
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 border-t border-white/5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDebug(!showDebug);
+                  setShowModelMenu(false);
+                }}
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-[13px] text-surface-300 hover:bg-white/5 transition-colors"
+              >
+                <span>RAW 调试面板</span>
+                <span className="text-[11px] opacity-70">{showDebug ? '已开启' : '关闭'}</span>
+              </button>
             </div>
-          )}
+          </div>
         </div>
+      )}
 
-        <div className="text-xs text-text-secondary px-2 shrink-0 whitespace-nowrap">
-          {affinity} · {levelLabel}
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowDebug(!showDebug)}
-          className="shrink-0 text-xs text-accent-500 px-2 py-1 rounded
-                     hover:bg-surface-200 dark:hover:bg-surface-700
-                     transition-colors"
-        >
-          RAW
-        </button>
-        <Button variant="ghost" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => setShowSaves(true)}>
-          存档
-        </Button>
-      </header>
-
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
         {showDebug && (
           <div className="border-t border-surface-200 dark:border-surface-700
                           bg-surface-900 max-h-96 overflow-y-auto">

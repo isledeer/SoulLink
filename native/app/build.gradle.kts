@@ -49,7 +49,8 @@ dependencies {
 // ------------------------------------------------------------------
 // React dist 同步：把仓库根的 ../dist 复制进 assets（WebView 内核）。
 // - 每次 preBuild 自动执行，./gradlew assembleDebug 无需手动步骤
-// - dist 不存在时跳过并保留 assets 里的占位页（构建不中断）
+// - **dist 不存在时直接失败**：静默跳过会把 1878 字节的占位页打进包，
+//   装到手机上就是「内核未同步」——这个坑踩过一次，必须防呆
 // - dist 存在时先清空 assets 再复制，避免残留旧哈希文件
 // ------------------------------------------------------------------
 val webDistDir = rootProject.file("../dist")
@@ -60,11 +61,13 @@ val syncDist by tasks.registering(Copy::class) {
     from(webDistDir)
     into(layout.projectDirectory.dir("src/main/assets"))
     doFirst {
-        if (webDistDir.isDirectory) {
-            delete(layout.projectDirectory.dir("src/main/assets"))
-        } else {
-            println("⚠️ 未找到 ${webDistDir.absolutePath}，跳过同步（保留占位页）")
+        if (!webDistDir.isDirectory) {
+            throw GradleException(
+                "找不到 ${webDistDir.absolutePath}。\n" +
+                    "请先在仓库根目录执行 pnpm build 生成 dist，再打包原生壳。"
+            )
         }
+        delete(layout.projectDirectory.dir("src/main/assets"))
     }
 }
 

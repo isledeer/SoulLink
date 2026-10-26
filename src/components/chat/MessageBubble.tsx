@@ -251,7 +251,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     : content;
 
   return (
-    <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full mb-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
         ref={rootRef}
         onContextMenu={(e) => {
@@ -262,10 +262,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         onTouchEnd={clearPressTimer}
         onTouchMove={clearPressTimer}
         onTouchCancel={clearPressTimer}
-        className={`relative max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+        className={`relative max-w-[78%] px-4 py-2.5 text-[15px] leading-[1.75] ${
           isUser
-            ? 'bg-primary-600 text-white rounded-br-none'
-            : 'bg-surface-200 text-text-primary rounded-bl-none dark:bg-surface-700 dark:text-surface-100'
+            ? 'bubble-user bg-primary-600 text-white rounded-2xl rounded-br-md'
+            : 'rounded-2xl rounded-bl-md bg-surface-800/75 text-surface-100 backdrop-blur-sm'
         }`}
       >
         {/**

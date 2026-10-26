@@ -131,3 +131,41 @@ button, input, select, textarea {
 }
 /* 行内公式不参与中文换行的字距拉伸 */
 .markdown-body .katex { font-size: 1.05em; }
+
+/* ------------------------------------------------------------------
+ * App 外壳与视觉基调（WebView 全屏容器）
+ *
+ * 注意：这里**不用 @apply**，也不依赖 Tailwind 生成顺序——
+ * 原生壳里这个类决定整个页面高度，写死比走工具类更可控。
+ * ------------------------------------------------------------------ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* 移动端不要橡皮筋：整页不滚，只有消息区滚 */
+  overscroll-behavior: none;
+}
+
+/*
+ * 100dvh 跟视觉视口走（键盘弹出、地址栏收放都稳），
+ * 老 WebView 不认识 dvh 时自动退回上一行的 100vh。
+ */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #070b14;
+  background-image:
+    radial-gradient(120% 65% at 50% -8%, rgba(14, 165, 233, 0.16), transparent 62%),
+    radial-gradient(90% 55% at 50% 108%, rgba(244, 63, 94, 0.07), transparent 65%);
+}
+
+/* 用户气泡的柔和外发光 */
+.bubble-user {
+  box-shadow: 0 6px 24px -10px rgba(2, 132, 199, 0.65);
+}

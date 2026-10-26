@@ -201,7 +201,7 @@ class MainActivity : ComponentActivity() {
         const val JS_BRIDGE_NAME = "SoulLinkNative"
         private const val FALLBACK_URL = "file:///android_asset/index.html"
 
-        /** 与 tailwind `surface-900` (#0f172a) 对齐 */
-        private val WEB_BACKGROUND_ARGB = 0xFF0F172A.toInt()
+        /** 与 Web 端 `.app-shell` 的背景色（#070b14）保持一致 */
+        private val WEB_BACKGROUND_ARGB = 0xFF070B14.toInt()
     }
 }

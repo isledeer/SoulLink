@@ -7,5 +7,6 @@ app/build/
 captures/
 .cxx/
 
-# assets 由 ./gradlew syncDist 从 ../dist 生成，是否纳入版本库自定
-# app/src/main/assets/
+# 内核产物由 ./gradlew syncDist 从 ../dist 生成，不入库
+# （dist 缺失时 syncDist 会直接失败，不会静默打包占位页）
+app/src/main/assets/
