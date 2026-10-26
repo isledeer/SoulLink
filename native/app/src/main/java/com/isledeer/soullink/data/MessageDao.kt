@@ -1,26 +1,16 @@
 package com.isledeer.soullink.data
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
-
-@Dao
-interface MessageDao {
-
-    /** 按时间正序观察整个会话；Compose 侧直接 collect 即可 */
-    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY createdAt ASC")
-    fun observeConversation(conversationId: String = MessageEntity.DEFAULT_CONVERSATION): Flow<List<MessageEntity>>
-
-    /** 一次性读取（启动时拉历史） */
-    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY createdAt ASC")
-    suspend fun loadConversation(conversationId: String = MessageEntity.DEFAULT_CONVERSATION): List<MessageEntity>
-
-    /** upsert：流式结束后写最终版本，重发时覆盖同一条 */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(message: MessageEntity)
-
-    @Query("DELETE FROM messages WHERE conversationId = :conversationId")
-    suspend fun clearConversation(conversationId: String = MessageEntity.DEFAULT_CONVERSATION)
-}
+/**
+ * ⚠️ 这个文件是**空壳**，不要在这里声明任何东西。
+ *
+ * 历史上 MessageDao 在这里，后来并入了 MessageEntity.kt。
+ * 但仓库里可能仍残留这份文件（git 跟踪），一旦保留旧内容就会和
+ * MessageEntity.kt 里的 interface MessageDao 冲突（重复声明）。
+ *
+ * 所以这里刻意留成一个合法但空的 Kotlin 文件：
+ *   - 文件存在 → git 覆盖后旧声明自动消失
+ *   - 没有任何声明 → 不会再触发 duplicate class
+ *
+ * 确认所有分支都不再需要它之后，可以安全删除本文件。
+ */
+internal const val MESSAGE_DAO_LEGACY_FILE = true

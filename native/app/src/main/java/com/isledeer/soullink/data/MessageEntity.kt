@@ -26,7 +26,12 @@ data class MessageEntity(
     val tokenCount: Int = 0,
     val isFavorite: Boolean = false,
     val createdAt: Long,
-)
+) {
+    companion object {
+        /** 默认会话 id（旧版本遗留的常量，保留以兼容任何残留引用） */
+        const val DEFAULT_CONVERSATION = "default"
+    }
+}
 
 @Dao
 interface MessageDao {
