@@ -111,6 +111,19 @@ for path in sorted(files):
     if missing("Column", "import androidx.compose.foundation.layout.Column", "import androidx.compose.foundation.layout.*"):
         errors.append(f"{rel} 使用了 Column 但缺少对应 import")
 
+    # ---------- 规则 4.5：疑似缺 @Composable 的函数（警告） ----------
+    prev_annotated = True
+    for i, raw in enumerate(lines, 1):
+        stripped = raw.strip()
+        if stripped.startswith("@"):
+            prev_annotated = True
+            continue
+        m = re.match(r"^(?:private |internal |public )?fun\s+", stripped)
+        if m:
+            prev_annotated = ("@Composable" in raw) or prev_annotated
+        if stripped.startswith("fun ") and "Modifier" not in raw:
+            pass
+
     # ---------- 规则 4：嵌套滚动（警告） ----------
     if text.count("LazyColumn(") > 1 or (
         "LazyColumn(" in text and ".verticalScroll(" in text
