@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.components.Emphasized
-import com.isledeer.soullink.ui.EmphasizedText
+import com.isledeer.soullink.ui.components.EmphasizedText
 import com.isledeer.soullink.ui.liquidGlass
 import kotlinx.coroutines.launch
 
