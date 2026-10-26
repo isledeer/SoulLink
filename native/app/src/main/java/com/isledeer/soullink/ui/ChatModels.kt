@@ -22,6 +22,7 @@ data class ChatMessage(
     val imageBase64: String? = null,
     val isStreaming: Boolean = false,
     val isError: Boolean = false,
+    val isInterrupted: Boolean = false,
     val isFavorite: Boolean = false,
     val generationSpeed: Double = 0.0,
     val tokenCount: Int = 0,

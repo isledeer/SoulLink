@@ -35,6 +35,7 @@ fun ChatRoute(
         onOpenAssistants = onOpenAssistants,
         onSend = { text, image -> viewModel.send(text, image) },
         onStop = viewModel::stop,
+        onContinueGeneration = viewModel::continueGeneration,
         onRegenerate = viewModel::regenerate,
         onDeleteMessage = viewModel::deleteMessage,
         onEditMessage = viewModel::editMessage,

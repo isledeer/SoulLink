@@ -62,6 +62,7 @@ dependencies {
 
     // ---------- 网络：OkHttp（SSE 已在 NativeSSE.kt） ----------
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0") // 文档解析（PDF 文本提取）
 
     // ---------- 协程 ----------
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

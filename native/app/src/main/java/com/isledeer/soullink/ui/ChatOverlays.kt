@@ -267,7 +267,9 @@ private fun SheetRow(
 fun AttachSheet(
     onDismiss: () -> Unit,
     onPickPhoto: () -> Unit,
+    onCamera: () -> Unit,
     onVoice: () -> Unit,
+    onDocument: () -> Unit,
     onFile: () -> Unit,
 ) {
     ModalBottomSheet(
@@ -277,7 +279,9 @@ fun AttachSheet(
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             SheetRow("照片", "从相册选择图片（多模态）", onPickPhoto, onDismiss)
+            SheetRow("拍照", "调用系统相机拍摄", onCamera, onDismiss)
             SheetRow("语音输入", "用系统识别把语音转成文字", onVoice, onDismiss)
+            SheetRow("文档", "PDF / DOCX / TXT 提取文本", onDocument, onDismiss)
             SheetRow("文件", "暂未开放", onFile, onDismiss)
             SheetRow("网络搜索", "当前版本未接入", {}, onDismiss)
             SheetRow("MCP", "未连接任何 MCP 服务", {}, onDismiss)

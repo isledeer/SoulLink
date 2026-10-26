@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import com.isledeer.soullink.ui.markdown.MarkdownMessage
 
 /* ------------------------------ 顶栏 ------------------------------ */
 
@@ -107,6 +108,7 @@ fun MessageBubble(
     onRegenerate: () -> Unit,
     onSpeak: () -> Unit,
     onMore: () -> Unit,
+    onContinue: () -> Unit,
 ) {
     val isUser = message.role == Role.User
 
@@ -171,16 +173,23 @@ fun MessageBubble(
                     else -> ""
                 }
                 if (body.isNotEmpty()) {
-                    Text(
-                        text = if (message.isStreaming) "$body ▍" else body,
-                        color = when {
-                            message.isError -> GlassTokens.Accent
-                            isUser -> Color.White
-                            else -> GlassTokens.TextPrimary
-                        },
-                        fontSize = 15.sp,
-                        lineHeight = 23.sp,
-                    )
+                    if (message.isStreaming || isUser) {
+                        Text(
+                            text = if (message.isStreaming) "$body ▍" else body,
+                            color = when {
+                                message.isError -> GlassTokens.Accent
+                                isUser -> Color.White
+                                else -> GlassTokens.TextPrimary
+                            },
+                            fontSize = 15.sp,
+                            lineHeight = 23.sp,
+                        )
+                    } else {
+                        MarkdownMessage(
+                            text = body,
+                            textColor = if (message.isError) GlassTokens.Accent else GlassTokens.TextPrimary,
+                        )
+                    }
                 }
             }
         }
@@ -194,6 +203,9 @@ fun MessageBubble(
                 if (!isUser) {
                     ActionText("重生成", onRegenerate)
                     ActionText("朗读", onSpeak)
+                    if (message.isInterrupted) {
+                        ActionText("继续生成", onContinue)
+                    }
                 }
                 ActionText("⋮", onMore)
 
@@ -248,6 +260,7 @@ fun ChatInputBar(
     onOpenAttach: () -> Unit,
     onOpenQuickPrompts: () -> Unit,
     onOpenConversationSettings: () -> Unit,
+    onVoiceInput: () -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -346,6 +359,19 @@ fun ChatInputBar(
                         innerTextField()
                     },
                 )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Surface(
+                onClick = onVoiceInput,
+                shape = CircleShape,
+                color = GlassTokens.BubbleAi.copy(alpha = 0.8f),
+                modifier = Modifier.size(46.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("🎤", fontSize = 16.sp)
+                }
             }
 
             Spacer(Modifier.width(8.dp))

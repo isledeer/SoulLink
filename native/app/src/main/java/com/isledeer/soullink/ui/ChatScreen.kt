@@ -24,7 +24,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.isledeer.soullink.util.DocumentParser
 import com.isledeer.soullink.util.ImageUtils
+import androidx.core.content.FileProvider
+import java.io.File
 import com.isledeer.soullink.util.VoiceInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,6 +54,7 @@ fun ChatScreen(
     onOpenAssistants: () -> Unit,
     onSend: (String, String?) -> Unit,
     onStop: () -> Unit,
+    onContinueGeneration: (String) -> Unit,
     onRegenerate: (String) -> Unit,
     onDeleteMessage: (String) -> Unit,
     onEditMessage: (String, String) -> Unit,
@@ -86,6 +90,31 @@ fun ChatScreen(
                     ImageUtils.uriToBase64(context, uri)
                 }
                 if (base64 != null) pendingImage = base64 else notice = "图片读取失败"
+            }
+        }
+    }
+
+    val cameraUri = remember { mutableStateOf<android.net.Uri?>(null) }
+    val takePicture = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { ok ->
+        val uri = cameraUri.value
+        cameraUri.value = null
+        if (ok && uri != null) {
+            scope.launch {
+                val base64 = withContext(Dispatchers.IO) { ImageUtils.uriToBase64(context, uri) }
+                if (base64 != null) pendingImage = base64 else notice = "拍照读取失败"
+            }
+        }
+    }
+
+    val pickDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val text = withContext(Dispatchers.IO) { DocumentParser.extract(context, uri) }
+                if (text.startsWith("（")) notice = text else input = input + text
             }
         }
     }
@@ -184,6 +213,7 @@ fun ChatScreen(
                             onRegenerate = { onRegenerate(message.id) },
                             onSpeak = { onSpeak(message.text) },
                             onMore = { actionsTarget = message },
+                            onContinue = { onContinueGeneration(message.id) },
                         )
                     }
                 }
@@ -206,6 +236,20 @@ fun ChatScreen(
                     onOpenAttach = { attachVisible = true },
                     onOpenQuickPrompts = { quickVisible = true },
                     onOpenConversationSettings = { settingsVisible = true },
+                    onVoiceInput = {
+                        val granted = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.RECORD_AUDIO
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (granted) {
+                            voice.listen(
+                                onPartial = { input = it },
+                                onResult = { input = it },
+                                onError = { notice = it },
+                            )
+                        } else {
+                            requestRecord.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
                     onSend = {
                         if (input.isNotBlank() || pendingImage != null) {
                             onSend(input.trim(), pendingImage)
@@ -240,7 +284,23 @@ fun ChatScreen(
                     requestRecord.launch(Manifest.permission.RECORD_AUDIO)
                 }
             },
-            onFile = { notice = "文件上传暂未开放" },
+            onCamera = {
+                val dir = File(context.cacheDir, "images").apply { mkdirs() }
+                val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                cameraUri.value = uri
+                takePicture.launch(uri)
+            },
+            onDocument = {
+                pickDocument.launch(
+                    arrayOf(
+                        "application/pdf",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/msword",
+                        "text/plain",
+                    )
+                )
+            },
         )
     }
 

@@ -293,8 +293,25 @@ class ChatViewModel(
     fun stop() {
         streamJob?.cancel()
         streamJob = null
-        _isGenerating.value = false
+        // 有已生成内容才标记「中断」，空占位不算
+        streamingId?.let { id ->
+            patchMessage(id) { it.copy(isStreaming = false, isInterrupted = it.text.isNotBlank()) }
+        }
         streamingId = null
+        _isGenerating.value = false
+    }
+
+    /** 继续生成：保留已生成的部分正文，接着往下补全 */
+    fun continueGeneration(messageId: String) {
+        val conv = _current.value ?: return
+        if (_isGenerating.value) return
+        val target = _messages.value.firstOrNull { it.id == messageId } ?: return
+        if (target.role != Role.Assistant) return
+
+        patchMessage(messageId) { it.copy(isInterrupted = false, isError = false) }
+        viewModelScope.launch {
+            startGeneration(conv, parentNodeId = target.nodeId, variantNodeId = null)
+        }
     }
 
     /* ---------------------------- 生成流程 ---------------------------- */
