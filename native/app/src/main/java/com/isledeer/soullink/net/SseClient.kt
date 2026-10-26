@@ -137,6 +137,28 @@ class SseClient(
         }
     }
 
+    /** 拉取该 provider 的模型列表（/v1/models → data[].id） */
+    suspend fun fetchModels(baseUrl: String, apiKey: String): List<String> = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(modelsUrl(baseUrl))
+            .addHeader("Authorization", "Bearer $apiKey")
+            .get()
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val snippet = runCatching { response.body?.string()?.take(200) }.getOrNull().orEmpty()
+                throw IOException("HTTP ${response.code} $snippet")
+            }
+            val body = response.body?.string().orEmpty()
+            val root = runCatching { JSONObject(body) }.getOrNull() ?: return@withContext emptyList()
+            val array = root.optJSONArray("data") ?: return@withContext emptyList()
+            (0 until array.length()).mapNotNull { i ->
+                array.optJSONObject(i)?.optString("id")?.takeIf { it.isNotBlank() }
+            }
+        }
+    }
+
     /** 连通性测试：GET /v1/models，返回可读结果或抛异常 */
     suspend fun testConnection(baseUrl: String, apiKey: String): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()

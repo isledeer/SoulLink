@@ -82,6 +82,10 @@ class SettingsViewModel(
         }
     }
 
+    /** 模型拉取（供 ModelPickerSheet 调用） */
+    suspend fun fetchModels(provider: ProviderConfig): Result<List<String>> =
+        runCatching { sse.fetchModels(provider.baseUrl, provider.apiKey) }
+
     fun test(provider: ProviderConfig) {
         if (provider.baseUrl.isBlank()) {
             _testResult.value = "Base URL 为空"

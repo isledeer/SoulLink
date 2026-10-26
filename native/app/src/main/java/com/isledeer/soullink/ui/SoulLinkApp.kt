@@ -98,6 +98,7 @@ private fun AssistantDetailRoute(
 ) {
     val viewModel: AssistantViewModel = koinViewModel()
     val detail by viewModel.detail.collectAsStateWithLifecycle()
+    val appSettings by viewModel.settings.collectAsStateWithLifecycle()
 
     // 新建助手走 create() 后立刻导航：upsert 与 findById 可能并发，容错重试几次
     LaunchedEffect(assistantId) {
@@ -112,6 +113,8 @@ private fun AssistantDetailRoute(
 
     AssistantDetailScreen(
         assistant = current,
+        providers = appSettings.providers,
+        fetchModels = viewModel::fetchModels,
         onBack = onBack,
         onSave = { updated ->
             viewModel.update { updated }

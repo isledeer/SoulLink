@@ -33,5 +33,5 @@ val appModule = module {
     // ViewModel
     viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
-    viewModel { AssistantViewModel(get()) }
+    viewModel { AssistantViewModel(get(), get(), get()) }
 }

@@ -69,6 +69,12 @@ class ChatViewModel(
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
+    private val _tokenUsage = MutableStateFlow(0)
+    val tokenUsage: StateFlow<Int> = _tokenUsage.asStateFlow()
+
+    private val _autoCompress = MutableStateFlow(false)
+    val autoCompress: StateFlow<Boolean> = _autoCompress.asStateFlow()
+
     private var streamJob: Job? = null
     private var streamingId: String? = null
 
@@ -286,6 +292,20 @@ class ChatViewModel(
             _current.value = entity.toUi()
             reloadMessages(entity.id)
         }
+    }
+
+    fun clearContext() {
+        val conversation = _current.value ?: return
+        stop()
+        viewModelScope.launch {
+            tree.clear(conversation.id)
+            _messages.value = emptyList()
+            _tokenUsage.value = 0
+        }
+    }
+
+    fun toggleAutoCompress() {
+        _autoCompress.value = !_autoCompress.value
     }
 
     fun speak(text: String) = speaker.speak(text)
@@ -512,6 +532,7 @@ class ChatViewModel(
                 createdAt = turn.message.createdAt,
             )
         }
+        _tokenUsage.value = _messages.value.sumOf { it.tokenCount }
     }
 
     private fun newConversationEntity(assistant: AssistantEntity?): ConversationEntity {

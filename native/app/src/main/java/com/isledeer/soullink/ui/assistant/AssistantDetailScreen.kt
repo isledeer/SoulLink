@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.isledeer.soullink.data.AssistantEntity
+import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.tools.LocalTools
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.components.CardGroup
@@ -48,6 +49,8 @@ private val PROMPT_VARIABLES = listOf("{{date}}", "{{time}}", "{{datetime}}", "{
 @Composable
 fun AssistantDetailScreen(
     assistant: AssistantEntity,
+    providers: List<ProviderConfig>,
+    fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
     onBack: () -> Unit,
     onSave: (AssistantEntity) -> Unit,
 ) {
@@ -55,6 +58,7 @@ fun AssistantDetailScreen(
     var prompt by remember(assistant.id) { mutableStateOf(assistant.systemPrompt) }
     var headersText by remember(assistant.id) { mutableStateOf(mapToLines(assistant.headerMap())) }
     var bodyText by remember(assistant.id) { mutableStateOf(mapToLines(assistant.bodyMap())) }
+    var modelPickerVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -130,12 +134,19 @@ fun AssistantDetailScreen(
                         }
                     }
 
-                    CardGroupItem {
-                        TextInput(
-                            value = draft.chatModelId.orEmpty(),
-                            placeholder = "绑定模型（留空 = 跟随全局默认）",
-                            onChange = { draft = draft.copy(chatModelId = it.ifBlank { null }) },
-                        )
+                    CardGroupItem(onClick = { modelPickerVisible = true }) {
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            EmphasizedText(
+                                text = draft.chatModelId?.takeIf { it.isNotBlank() } ?: "点击选择模型（跟随全局默认）",
+                                style = Emphasized.body,
+                                color = if (draft.chatModelId.isNullOrBlank()) GlassTokens.TextSecondary else GlassTokens.TextPrimary,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text("›", color = GlassTokens.TextSecondary, fontSize = 15.sp)
+                        }
                     }
 
                     CardGroupItem {
@@ -313,6 +324,15 @@ fun AssistantDetailScreen(
 
                 Spacer(Modifier.height(28.dp))
             }
+        }
+
+        if (modelPickerVisible) {
+            com.isledeer.soullink.ui.components.ModelPickerSheet(
+                providers = providers,
+                fetchModels = fetchModels,
+                onPick = { model -> draft = draft.copy(chatModelId = model); modelPickerVisible = false },
+                onDismiss = { modelPickerVisible = false },
+            )
         }
     }
 }

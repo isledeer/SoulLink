@@ -48,6 +48,7 @@ fun ChatTopBar(
     modelName: String,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenConsole: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -83,6 +84,7 @@ fun ChatTopBar(
         }
 
         CircleIconButton("⚙", onOpenSettings)
+        CircleIconButton("⋮", onOpenConsole)
     }
 }
 

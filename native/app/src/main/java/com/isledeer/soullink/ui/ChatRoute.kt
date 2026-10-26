@@ -19,6 +19,8 @@ fun ChatRoute(
     val current by viewModel.current.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val isGenerating by viewModel.isGenerating.collectAsStateWithLifecycle()
+    val tokenUsage by viewModel.tokenUsage.collectAsStateWithLifecycle()
+    val autoCompress by viewModel.autoCompress.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
     ChatScreen(
@@ -35,7 +37,11 @@ fun ChatRoute(
         onOpenAssistants = onOpenAssistants,
         onSend = { text, image -> viewModel.send(text, image) },
         onStop = viewModel::stop,
+        tokenUsage = tokenUsage,
+        autoCompress = autoCompress,
+        onToggleAutoCompress = viewModel::toggleAutoCompress,
         onContinueGeneration = viewModel::continueGeneration,
+        onClearContext = viewModel::clearContext,
         onRegenerate = viewModel::regenerate,
         onDeleteMessage = viewModel::deleteMessage,
         onEditMessage = viewModel::editMessage,

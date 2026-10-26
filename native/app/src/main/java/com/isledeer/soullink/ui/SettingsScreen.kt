@@ -10,6 +10,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.Alignment
@@ -40,9 +44,12 @@ fun SettingsScreen(
     onRemoveProvider: (String) -> Unit,
     onSetBinding: (Feature, String, String) -> Unit,
     onTest: (ProviderConfig) -> Unit,
+    fetchModels: suspend (ProviderConfig) -> Result<List<String>>,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
+    var pickerFeature by remember { mutableStateOf<Feature?>(null) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -140,6 +147,7 @@ fun SettingsScreen(
                         feature = feature,
                         settings = state,
                         onSetBinding = onSetBinding,
+                        onOpenPicker = { pickerFeature = feature },
                     )
                 }
 
@@ -166,6 +174,24 @@ fun SettingsScreen(
                     modifier = Modifier.padding(top = 10.dp, bottom = 28.dp),
                 )
             }
+        }
+
+        pickerFeature?.let { feature ->
+            val currentBinding = state.bindings[feature]
+            com.isledeer.soullink.ui.components.ModelPickerSheet(
+                providers = state.providers,
+                fetchModels = fetchModels,
+                onProviderPicked = { provider ->
+                    onSetBinding(feature, provider.id, currentBinding?.model.orEmpty())
+                },
+                onPick = { model ->
+                    val providerId = state.bindings[feature]?.providerId
+                        ?: state.providers.firstOrNull()?.id.orEmpty()
+                    onSetBinding(feature, providerId, model)
+                    pickerFeature = null
+                },
+                onDismiss = { pickerFeature = null },
+            )
         }
     }
 }
@@ -250,6 +276,7 @@ private fun BindingCard(
     feature: Feature,
     settings: AppSettings,
     onSetBinding: (Feature, String, String) -> Unit,
+    onOpenPicker: () -> Unit,
 ) {
     val binding = settings.bindings[feature]
     val providerId = binding?.providerId
@@ -291,11 +318,25 @@ private fun BindingCard(
         }
 
         Spacer(Modifier.height(8.dp))
-        SettingsInput(
-            value = model,
-            placeholder = "模型名（如 deepseek-chat）",
-            onValueChange = { onSetBinding(feature, providerId, it) },
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0x0DFFFFFF))
+                .clickable(onClick = onOpenPicker)
+                .padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = model.ifBlank { "点击选择模型" },
+                color = if (model.isBlank()) GlassTokens.TextSecondary.copy(alpha = 0.7f) else GlassTokens.TextPrimary,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text("›", color = GlassTokens.TextSecondary, fontSize = 15.sp)
+        }
     }
 }
 
@@ -360,6 +401,7 @@ fun SettingsRoute(onBack: () -> Unit) {
             viewModel.setBinding(feature, providerId, model)
         },
         onTest = viewModel::test,
+        fetchModels = viewModel::fetchModels,
         onSave = viewModel::save,
         onBack = onBack,
     )

@@ -2,8 +2,12 @@ package com.isledeer.soullink.ui.assistant
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.isledeer.soullink.data.AppSettings
 import com.isledeer.soullink.data.AssistantDao
 import com.isledeer.soullink.data.AssistantEntity
+import com.isledeer.soullink.data.ProviderConfig
+import com.isledeer.soullink.data.SettingsRepository
+import com.isledeer.soullink.net.SseClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +21,20 @@ import java.util.UUID
  */
 class AssistantViewModel(
     private val dao: AssistantDao,
+    private val sse: SseClient,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
+
+    private val _settings = MutableStateFlow(AppSettings())
+    val settings: StateFlow<AppSettings> = _settings.asStateFlow()
+
+    init {
+        viewModelScope.launch { settingsRepository.flow.collect { _settings.value = it } }
+    }
+
+    /** 模型拉取（供 ModelPickerSheet 调用） */
+    suspend fun fetchModels(provider: ProviderConfig): Result<List<String>> =
+        runCatching { sse.fetchModels(provider.baseUrl, provider.apiKey) }
 
     private val _assistants = MutableStateFlow<List<AssistantEntity>>(emptyList())
     val assistants: StateFlow<List<AssistantEntity>> = _assistants.asStateFlow()

@@ -54,7 +54,11 @@ fun ChatScreen(
     onOpenAssistants: () -> Unit,
     onSend: (String, String?) -> Unit,
     onStop: () -> Unit,
+    tokenUsage: Int,
+    autoCompress: Boolean,
+    onToggleAutoCompress: () -> Unit,
     onContinueGeneration: (String) -> Unit,
+    onClearContext: () -> Unit,
     onRegenerate: (String) -> Unit,
     onDeleteMessage: (String) -> Unit,
     onEditMessage: (String, String) -> Unit,
@@ -76,6 +80,7 @@ fun ChatScreen(
     var settingsVisible by remember { mutableStateOf(false) }
     var actionsTarget by remember { mutableStateOf<ChatMessage?>(null) }
     var editTarget by remember { mutableStateOf<ChatMessage?>(null) }
+    var consoleVisible by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     val voice = remember { VoiceInput(context) }
@@ -196,6 +201,7 @@ fun ChatScreen(
                     modelName = modelName,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenSettings = { settingsVisible = true },
+                    onOpenConsole = { consoleVisible = true },
                 )
 
                 LazyColumn(
@@ -386,5 +392,27 @@ private fun EditMessageDialog(
                 TextButton(onClick = { onConfirm(text) }) { Text("保存", color = GlassTokens.Primary) }
             }
         }
+    }
+    if (consoleVisible) {
+        val toast: (String) -> Unit = { text ->
+            android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
+        }
+        com.isledeer.soullink.ui.components.ChatConsoleMenu(
+            expanded = true,
+            onDismiss = { consoleVisible = false },
+            tokenUsage = tokenUsage,
+            autoCompress = autoCompress,
+            onNewConversation = onNewConversation,
+            onSearch = { toast("会话内搜索开发中") },
+            onShare = { toast("分享 / 导出开发中") },
+            onClearConversation = { onClearContext() },
+            onOpenConversationSettings = { settingsVisible = true },
+            onToggleAutoCompress = onToggleAutoCompress,
+            onMemory = { toast("记忆面板开发中") },
+            onSkills = { toast("技能面板开发中") },
+            onMcp = { toast("MCP 状态开发中") },
+            onMessageTree = { toast("消息树视图开发中") },
+            onRawDebug = { toast("RAW 面板开发中") },
+        )
     }
 }
