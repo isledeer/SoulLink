@@ -48,6 +48,7 @@ fun ChatScreen(
     onDeleteConversation: (String) -> Unit,
     onOpenProviderSettings: () -> Unit,
     onOpenWorldBook: () -> Unit,
+    onOpenAssistants: () -> Unit,
     onSend: (String, String?) -> Unit,
     onStop: () -> Unit,
     onRegenerate: (String) -> Unit,
@@ -142,6 +143,10 @@ fun ChatScreen(
                     onOpenWorldBook = {
                         scope.launch { drawerState.close() }
                         onOpenWorldBook()
+                    },
+                    onOpenAssistants = {
+                        scope.launch { drawerState.close() }
+                        onOpenAssistants()
                     },
                 )
             }

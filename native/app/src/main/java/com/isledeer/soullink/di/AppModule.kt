@@ -7,6 +7,7 @@ import com.isledeer.soullink.net.SseClient
 import com.isledeer.soullink.tools.LocalTools
 import com.isledeer.soullink.ui.ChatViewModel
 import com.isledeer.soullink.ui.SettingsViewModel
+import com.isledeer.soullink.ui.assistant.AssistantViewModel
 import com.isledeer.soullink.util.Speaker
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -32,4 +33,5 @@ val appModule = module {
     // ViewModel
     viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
+    viewModel { AssistantViewModel(get()) }
 }

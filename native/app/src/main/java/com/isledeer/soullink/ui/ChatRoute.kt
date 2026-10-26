@@ -11,6 +11,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ChatRoute(
     onOpenProviderSettings: () -> Unit,
     onOpenWorldBook: () -> Unit,
+    onOpenAssistants: () -> Unit,
 ) {
     val viewModel: ChatViewModel = koinViewModel()
 
@@ -31,6 +32,7 @@ fun ChatRoute(
         onDeleteConversation = viewModel::deleteConversation,
         onOpenProviderSettings = onOpenProviderSettings,
         onOpenWorldBook = onOpenWorldBook,
+        onOpenAssistants = onOpenAssistants,
         onSend = { text, image -> viewModel.send(text, image) },
         onStop = viewModel::stop,
         onRegenerate = viewModel::regenerate,

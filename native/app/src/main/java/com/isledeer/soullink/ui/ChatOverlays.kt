@@ -63,6 +63,7 @@ fun DrawerContent(
     onDeleteConversation: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenWorldBook: () -> Unit,
+    onOpenAssistants: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -115,7 +116,10 @@ fun DrawerContent(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .clickable {
-                        if (entry.label == "故事书") onOpenWorldBook()
+                        when (entry.label) {
+                            "助手" -> onOpenAssistants()
+                            "故事书" -> onOpenWorldBook()
+                        }
                     }
                     .padding(horizontal = 10.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
