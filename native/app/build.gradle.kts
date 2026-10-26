@@ -12,8 +12,8 @@ android {
         applicationId = "com.isledeer.soullink"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0-native"
+        versionCode = 2
+        versionName = "1.1.0-native"
     }
 
     buildTypes {
@@ -38,20 +38,62 @@ android {
 }
 
 dependencies {
+    // ---------- Compose ----------
     implementation(platform("androidx.compose:compose-bom:2024.09.03"))
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.9.2")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // ---------- Lifecycle / 导航（对齐 RikkaHub：Navigation Compose） ----------
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+    implementation("androidx.navigation:navigation-compose:2.8.4")
+
+    // ---------- DI：Koin ----------
+    implementation("io.insert-koin:koin-android:4.0.0")
+    implementation("io.insert-koin:koin-androidx-compose:4.0.0")
+
+    // ---------- 设置存储：DataStore ----------
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // ---------- 网络：OkHttp（SSE 已在 NativeSSE.kt） ----------
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // ---------- 协程 ----------
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // ------------------------------------------------------------------
+    // Room：等真正写数据层时再启用。现在启用会空跑注解处理器、拉长 CI。
+    // 启用时需要的三处改动：
+    //   1) 根 build.gradle.kts 的 plugins 里加：
+    //        id("com.google.devtools.ksp") version "2.0.21-1.0.28" apply false
+    //   2) 本文件 plugins 里加： id("com.google.devtools.ksp")
+    //   3) 解开下面两行：
+    // implementation("androidx.room:room-runtime:2.6.1")
+    // implementation("androidx.room:room-ktx:2.6.1")
+    // ksp("androidx.room:room-compiler:2.6.1")
+    // ------------------------------------------------------------------
+
+    // ------------------------------------------------------------------
+    // 液态玻璃：两条路都要升工具链，暂不启用（详见 ui/Glass.kt 注释）
+    //
+    // A. Cloudy（有 Modifier.liquidGlass）：
+    //    implementation("com.github.skydoves:cloudy:1.0.0-alpha01")
+    //    要求 Kotlin ≥2.4.0 / Compose ≥1.11.4 / minSdk 31（RenderEffect）
+    //
+    // B. Kyant0 backdrop（只有 drawBackdrop/layerBackdrop）：
+    //    implementation("io.github.kyant0:backdrop:2.0.1")
+    //    要求 Kotlin ≥2.4.10 / Compose ≥1.12.0，底层 RuntimeShader → API 33+
+    // ------------------------------------------------------------------
 }
 
 // ------------------------------------------------------------------
 // React dist 同步：把仓库根的 ../dist 复制进 assets（WebView 内核）。
-// - 每次 preBuild 自动执行，./gradlew assembleDebug 无需手动步骤
-// - **dist 不存在时直接失败**：静默跳过会把 1878 字节的占位页打进包，
-//   装到手机上就是「内核未同步」——这个坑踩过一次，必须防呆
-// - dist 存在时先清空 assets 再复制，避免残留旧哈希文件
+// - 每次 preBuild 自动执行
+// - **dist 不存在时直接失败**：静默跳过会把占位页打进包（踩过一次）
 // ------------------------------------------------------------------
 val webDistDir = rootProject.file("../dist")
 
