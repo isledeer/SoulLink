@@ -24,6 +24,7 @@ val appModule = module {
     single { get<AppDatabase>().messageTreeDao() }
     single { get<AppDatabase>().gameSessionDao() }
     single { get<AppDatabase>().gameEventDao() }
+    single { get<AppDatabase>().worldBookDao() }
     single { MessageTreeRepository(get()) }
     single { GameLedgerRepository(get(), get(), get(), get()) }
     single { SettingsRepository(androidContext()) }
@@ -37,7 +38,8 @@ val appModule = module {
     single { SearchService() }
 
     // ViewModel
-    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { AssistantViewModel(get(), get(), get()) }
+    viewModel { com.isledeer.soullink.ui.worldbook.WorldbookViewModel(get(), get(), get(), get(), get(), get()) }
 }

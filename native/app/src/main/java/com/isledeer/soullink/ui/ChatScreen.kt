@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,10 +30,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.isledeer.soullink.data.ProviderConfig
+import com.isledeer.soullink.data.GameState
+import com.isledeer.soullink.data.WorldNpc
 import com.isledeer.soullink.ui.chat.AttachBottomSheet
 import com.isledeer.soullink.ui.chat.ChatInputBar
 import com.isledeer.soullink.ui.chat.ToolsBottomSheet
@@ -96,6 +101,12 @@ fun ChatScreen(
     enabledMcp: Set<String>,
     onToggleMcp: (String) -> Unit,
     onCompact: () -> Unit,
+    gameState: GameState?,
+    worldNpcs: List<WorldNpc>,
+    sessionThreads: List<Conversation>,
+    onSwitchThread: (String) -> Unit,
+    onStartNpc: (String) -> Unit,
+    onPickChoice: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -289,6 +300,24 @@ fun ChatScreen(
                         base64 = pendingImage!!,
                         onClear = { pendingImage = null },
                     )
+                }
+
+                gameState?.let { state ->
+                    GameHudCard(
+                        state = state,
+                        npcs = worldNpcs,
+                        threads = sessionThreads,
+                        activeId = current?.id,
+                        onSwitch = onSwitchThread,
+                        onStartNpc = onStartNpc,
+                    )
+                }
+
+                val lastChoices = messages.lastOrNull {
+                    it.role == Role.Assistant && it.choices.isNotEmpty() && !it.isStreaming
+                }?.choices.orEmpty()
+                if (lastChoices.isNotEmpty() && !isGenerating) {
+                    ChoiceBar(choices = lastChoices, onPick = onPickChoice)
                 }
 
                 if (quickPrompts.isNotEmpty() && !isGenerating) {
@@ -931,6 +960,147 @@ private fun ContextDialog(
                         onDismiss()
                     },
                 ) { Text("清空对话", color = GlassTokens.Accent) }
+            }
+        }
+    }
+}
+
+/* ----------------------------- 游戏状态卡 ----------------------------- */
+
+@Composable
+private fun GameHudCard(
+    state: GameState,
+    npcs: List<WorldNpc>,
+    threads: List<Conversation>,
+    activeId: String?,
+    onSwitch: (String) -> Unit,
+    onStartNpc: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val npcNames = npcs.associateBy { it.id }
+    val scene = state.scene.ifBlank { "未定场景" }
+    val relationSummary = state.relations.entries
+        .filter { it.key == "self" || it.value != 0 }
+        .joinToString(" ") { (key, value) ->
+            val label = if (key == "self") "好感" else npcNames[key]?.name ?: key
+            "$label $value"
+        }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(GlassTokens.BubbleAi.copy(alpha = 0.6f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "◆ 状态",
+                color = GlassTokens.Primary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = listOf(scene, relationSummary).filter { it.isNotBlank() }.joinToString(" · "),
+                color = GlassTokens.TextSecondary,
+                fontSize = 10.sp,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+            Text(if (expanded) "收起" else "展开", color = GlassTokens.TextSecondary, fontSize = 10.sp)
+        }
+        if (expanded) {
+            Spacer(Modifier.height(6.dp))
+            val relationLine = state.relations.entries.joinToString("、") { (key, value) ->
+                val label = if (key == "self") "好感度" else npcNames[key]?.name ?: key
+                "$label $value"
+            }
+            Text("关系：${relationLine.ifBlank { "无" }}", color = GlassTokens.TextPrimary, fontSize = 11.sp)
+            Text(
+                text = "背包：${if (state.inventory.isEmpty()) "空" else state.inventory.values.joinToString("、") { "${it.name}×${it.quantity}" }}",
+                color = GlassTokens.TextPrimary,
+                fontSize = 11.sp,
+            )
+            Text("场景：${state.scene.ifBlank { "未定" }}", color = GlassTokens.TextPrimary, fontSize = 11.sp)
+            Text("旗标：${if (state.flags.isEmpty()) "无" else state.flags.keys.joinToString("、")}", color = GlassTokens.TextPrimary, fontSize = 11.sp)
+            state.worldTime?.let { time ->
+                Text("时间：$time", color = GlassTokens.TextPrimary, fontSize = 11.sp)
+            }
+
+            if (threads.size > 1 || npcs.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("镜头", color = GlassTokens.TextSecondary, fontSize = 10.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    threads.forEach { thread ->
+                        val active = thread.id == activeId
+                        Text(
+                            text = thread.title,
+                            color = if (active) GlassTokens.Primary else GlassTokens.TextSecondary,
+                            fontSize = 10.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.06f))
+                                .clickable { onSwitch(thread.id) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                    npcs.filter { npc -> threads.none { it.title == npc.name } }.forEach { npc ->
+                        Text(
+                            text = "+ ${npc.name}",
+                            color = GlassTokens.TextSecondary,
+                            fontSize = 10.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .clickable { onStartNpc(npc.id) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ------------------------------- 选项条 ------------------------------- */
+
+@Composable
+private fun ChoiceBar(choices: List<String>, onPick: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        choices.take(4).forEachIndexed { index, text ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GlassTokens.Primary.copy(alpha = 0.13f))
+                    .clickable { onPick(text) }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${('A' + index)}",
+                    color = GlassTokens.Primary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.width(16.dp),
+                )
+                Text(text, color = GlassTokens.TextPrimary, fontSize = 12.sp, maxLines = 2)
             }
         }
     }

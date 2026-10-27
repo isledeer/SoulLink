@@ -1,6 +1,7 @@
 package com.isledeer.soullink.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.isledeer.soullink.data.Feature
@@ -30,6 +31,17 @@ fun ChatRoute(
     val thinkingLevel by viewModel.thinkingLevel.collectAsStateWithLifecycle()
     val currentModelName by viewModel.currentModelName.collectAsStateWithLifecycle()
     val memorySummary by viewModel.memorySummary.collectAsStateWithLifecycle()
+    val gameState by viewModel.gameState.collectAsStateWithLifecycle()
+    val worldNpcs by viewModel.worldNpcs.collectAsStateWithLifecycle()
+    val sessionThreads by viewModel.sessionThreads.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshConversations()
+        ChatSelectionBridge.pendingConversationId?.let { id ->
+            viewModel.selectConversation(id)
+            ChatSelectionBridge.pendingConversationId = null
+        }
+    }
 
     ChatScreen(
         conversations = conversations,
@@ -81,5 +93,11 @@ fun ChatRoute(
         enabledMcp = currentAssistant?.mcpList()?.toSet().orEmpty(),
         onToggleMcp = viewModel::toggleMcpServer,
         onCompact = { viewModel.compactNow() },
+        gameState = gameState,
+        worldNpcs = worldNpcs,
+        sessionThreads = sessionThreads,
+        onSwitchThread = viewModel::selectConversation,
+        onStartNpc = viewModel::startNpcThread,
+        onPickChoice = { text -> viewModel.send(text, null) },
     )
 }

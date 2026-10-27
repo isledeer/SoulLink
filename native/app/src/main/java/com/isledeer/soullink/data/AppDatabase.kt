@@ -13,9 +13,11 @@ import androidx.room.RoomDatabase
         UIMessageEntity::class,
         GameSessionEntity::class,
         GameEventEntity::class,
+        WorldBookEntity::class,
+        WorldEntryEntity::class,
     ],
-    // v5：游戏账本（game_sessions / game_events）。破坏性迁移，旧数据清空。
-    version = 5,
+    // v6：世界书（worldbooks / world_entries）。破坏性迁移，旧数据清空。
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun messageTreeDao(): MessageTreeDao
     abstract fun gameSessionDao(): GameSessionDao
     abstract fun gameEventDao(): GameEventDao
+    abstract fun worldBookDao(): WorldBookDao
 
     companion object {
         @Volatile

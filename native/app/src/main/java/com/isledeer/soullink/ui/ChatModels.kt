@@ -46,3 +46,8 @@ data class Conversation(
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
 )
+
+/** 世界书「开始游戏」→ 聊天页的选中桥（跨路由 ViewModel 通信） */
+object ChatSelectionBridge {
+    var pendingConversationId: String? = null
+}

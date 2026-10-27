@@ -52,6 +52,7 @@ import com.isledeer.soullink.net.LocalWebServer
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.liquidGlass
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -236,7 +237,7 @@ private suspend fun buildBackupJson(db: AppDatabase, settingsRepo: SettingsRepos
         messages += db.messageTreeDao().loadAllMessages(conversation.id)
     }
     val events = sessions.flatMap { db.gameEventDao().forSession(it.id) }
-    val settingsJson = runBlocking { kotlinx.coroutines.flow.first(settingsRepo.flow).toJson() }
+    val settingsJson = runBlocking { settingsRepo.flow.first().toJson() }
 
     JSONObject()
         .put("app", "soullink")

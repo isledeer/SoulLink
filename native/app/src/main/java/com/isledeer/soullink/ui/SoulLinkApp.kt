@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,13 +56,20 @@ import com.isledeer.soullink.ui.settings.SponsorScreen
 import com.isledeer.soullink.ui.settings.StorageScreen
 import com.isledeer.soullink.ui.settings.VoiceScreen
 import com.isledeer.soullink.ui.settings.WebServerScreen
+import com.isledeer.soullink.ui.worldbook.WorldBookEditScreen
+import com.isledeer.soullink.ui.worldbook.WorldBookListScreen
+import com.isledeer.soullink.ui.worldbook.WorldbookViewModel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 object Routes {
     const val CHAT = "chat"
     const val SETTINGS = "settings"
-    const val WORLD_BOOK = "worldbook"
+    const val WORLD_BOOK = "worldbooks"
+    const val WORLD_BOOK_EDIT = "worldbook/{id}"
+
+    fun worldbookEdit(id: String) = "worldbook/$id"
     const val ASSISTANTS = "assistants"
     const val ASSISTANT_DETAIL = "assistant/{id}"
     const val PROVIDERS = "providers"
@@ -191,7 +200,22 @@ fun SoulLinkApp() {
         }
 
         composable(Routes.WORLD_BOOK) {
-            WorldBookScreen(onBack = { navController.popBackStack() })
+            WorldbookListRoute(
+                onBack = { navController.popBackStack() },
+                onOpen = { id -> navController.navigate(Routes.worldbookEdit(id)) },
+                onBackToChat = { navController.popBackStack(Routes.CHAT, false) },
+            )
+        }
+
+        composable(
+            route = Routes.WORLD_BOOK_EDIT,
+            arguments = listOf(navArgument("id") { type = NavType.StringType }),
+        ) { entry ->
+            WorldbookEditRoute(
+                bookId = entry.arguments?.getString("id").orEmpty(),
+                onBack = { navController.popBackStack() },
+                onBackToChat = { navController.popBackStack(Routes.CHAT, false) },
+            )
         }
 
         composable(Routes.ASSISTANTS) {
@@ -471,5 +495,88 @@ private fun ProviderDetailRoute(
         fetchModels = { viewModel.fetchModels(provider) },
         onSave = viewModel::save,
         onBack = onBack,
+    )
+}
+
+@Composable
+private fun WorldbookListRoute(
+    onBack: () -> Unit,
+    onOpen: (String) -> Unit,
+    onBackToChat: () -> Unit,
+) {
+    val viewModel: WorldbookViewModel = koinViewModel()
+    val books by viewModel.books.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
+    WorldBookListScreen(
+        books = books,
+        onBack = onBack,
+        onCreate = { template, title -> onOpen(viewModel.create(template, title)) },
+        onOpen = onOpen,
+        onDelete = viewModel::delete,
+        onStart = { id ->
+            scope.launch {
+                val conversationId = viewModel.startSession(id)
+                if (conversationId != null) {
+                    ChatSelectionBridge.pendingConversationId = conversationId
+                    onBackToChat()
+                }
+            }
+        },
+        onImport = { raw -> viewModel.importBook(raw) { } },
+    )
+}
+
+@Composable
+private fun WorldbookEditRoute(
+    bookId: String,
+    onBack: () -> Unit,
+    onBackToChat: () -> Unit,
+) {
+    val viewModel: WorldbookViewModel = koinViewModel()
+    val book by viewModel.detail.collectAsStateWithLifecycle()
+    val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val notice by viewModel.message.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(bookId) { viewModel.load(bookId) }
+
+    val current = book
+    if (current == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
+                    )
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("加载中…", color = GlassTokens.TextPrimary, fontSize = 14.sp)
+        }
+        return
+    }
+
+    WorldBookEditScreen(
+        book = current,
+        entries = entries,
+        busy = busy,
+        onBack = onBack,
+        onSave = viewModel::save,
+        onAiFill = { premise -> viewModel.aiFill(bookId, premise) { } },
+        onStart = {
+            scope.launch {
+                val conversationId = viewModel.startSession(bookId)
+                if (conversationId != null) {
+                    ChatSelectionBridge.pendingConversationId = conversationId
+                    onBackToChat()
+                }
+            }
+        },
+        notice = notice,
     )
 }

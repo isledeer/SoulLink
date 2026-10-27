@@ -21,6 +21,10 @@ import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.data.ResolvedConfig
 import com.isledeer.soullink.data.SettingsRepository
 import com.isledeer.soullink.data.UIMessageEntity
+import com.isledeer.soullink.data.WorldBookDao
+import com.isledeer.soullink.data.WorldDoc
+import com.isledeer.soullink.data.WorldNpc
+import com.isledeer.soullink.data.WorldbookPrompt
 import com.isledeer.soullink.data.isGameEnabled
 import com.isledeer.soullink.net.ChatRequest
 import com.isledeer.soullink.net.ChatTurn
@@ -58,6 +62,7 @@ class ChatViewModel(
     private val ledger: GameLedgerRepository,
     private val speaker: Speaker,
     private val searchService: SearchService,
+    private val worldBookDao: WorldBookDao,
 ) : ViewModel() {
 
     private val _settings = MutableStateFlow(AppSettings())
@@ -92,6 +97,13 @@ class ChatViewModel(
 
     private val _memorySummary = MutableStateFlow<String?>(null)
     val memorySummary: StateFlow<String?> = _memorySummary.asStateFlow()
+
+    /** 游戏会话：同 session 下的全部对话线（世界线 + NPC 线）与可进入的 NPC */
+    private val _sessionThreads = MutableStateFlow<List<Conversation>>(emptyList())
+    val sessionThreads: StateFlow<List<Conversation>> = _sessionThreads.asStateFlow()
+
+    private val _worldNpcs = MutableStateFlow<List<WorldNpc>>(emptyList())
+    val worldNpcs: StateFlow<List<WorldNpc>> = _worldNpcs.asStateFlow()
 
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
@@ -800,10 +812,74 @@ class ChatViewModel(
     /** 重新推导当前会话的账本状态；普通聊天置 null。 */
     private suspend fun refreshGameState(conversationId: String) {
         val session = runCatching { ledger.sessionOf(conversationId) }.getOrNull()
-        _gameState.value = if (session?.isGameEnabled == true) {
-            runCatching { ledger.derive(session.id) }.getOrNull()
+        if (session == null || !session.isGameEnabled) {
+            _gameState.value = null
+            _sessionThreads.value = emptyList()
+            _worldNpcs.value = emptyList()
+            return
+        }
+        _gameState.value = runCatching { ledger.derive(session.id) }.getOrNull()
+        _sessionThreads.value = runCatching {
+            conversationDao.loadBySession(session.id).map { it.toUi() }
+        }.getOrDefault(emptyList())
+        val worldbookId = session.worldbookId
+        _worldNpcs.value = if (!worldbookId.isNullOrBlank()) {
+            runCatching {
+                WorldDoc.parse(worldBookDao.findById(worldbookId)?.docJson).npcs
+            }.getOrDefault(emptyList())
         } else {
-            null
+            emptyList()
+        }
+    }
+
+    /** 进入 NPC 攻略线（同一本账的独立会话；已存在则直接切换） */
+    fun startNpcThread(npcId: String) {
+        val conv = _current.value ?: return
+        viewModelScope.launch {
+            val session = ledger.sessionOf(conv.id) ?: return@launch
+            val worldbookId = session.worldbookId ?: return@launch
+            val book = worldBookDao.findById(worldbookId) ?: return@launch
+            val doc = WorldDoc.parse(book.docJson)
+            val npc = doc.npcs.firstOrNull { it.id == npcId || it.name == npcId } ?: return@launch
+
+            val existing = conversationDao.loadBySession(session.id).firstOrNull { it.title == npc.name }
+            if (existing != null) {
+                selectConversation(existing.id)
+                return@launch
+            }
+
+            val now = System.currentTimeMillis()
+            val assistantId = java.util.UUID.randomUUID().toString()
+            assistantDao.upsert(
+                AssistantEntity(
+                    id = assistantId,
+                    name = "世界书·${doc.title}·${npc.name}",
+                    systemPrompt = "你是${npc.name}（${npc.role}）。${npc.brief}。你身处世界「${doc.title}」，用第一人称回应，不要跳出角色，不替用户做决定。",
+                    temperature = 0.9f,
+                    maxTokens = 2048,
+                    localTools = "[\"game\",\"time\"]",
+                )
+            )
+            val conversationId = java.util.UUID.randomUUID().toString()
+            conversationDao.upsert(
+                ConversationEntity(
+                    id = conversationId,
+                    title = npc.name,
+                    assistantId = assistantId,
+                    sessionId = session.id,
+                    createdAt = now,
+                    updatedAt = now,
+                )
+            )
+            refreshConversations()
+            selectConversation(conversationId)
+        }
+    }
+
+    /** 从数据库重载会话列表（世界书「开始游戏」后回聊天页会用到） */
+    fun refreshConversations() {
+        viewModelScope.launch {
+            _conversations.value = conversationDao.loadAll().map { it.toUi() }
         }
     }
 
@@ -814,6 +890,22 @@ class ChatViewModel(
         usable: List<ChatMessage>,
     ): String {
         val sections = mutableListOf<String>()
+
+        // 世界书模式：世界规则 + 激活条目 + 状态快照 + 输出契约放最前
+        val session = activeSession
+        val worldbookId = session?.worldbookId
+        if (gameActive && !worldbookId.isNullOrBlank()) {
+            val book = runCatching { worldBookDao.findById(worldbookId) }.getOrNull()
+            if (book != null) {
+                val doc = WorldDoc.parse(book.docJson)
+                val entries = runCatching { worldBookDao.entriesOf(worldbookId) }.getOrDefault(emptyList())
+                val recent = usable.takeLast(6).joinToString("\n") { it.text }
+                val activeEntries = WorldbookPrompt.activate(entries, recent)
+                val useTool = config.tools.any { it.name == GAME_TOOL_NAME }
+                sections.add(WorldbookPrompt.buildSystemSection(doc, activeEntries, _gameState.value, useTool))
+            }
+        }
+
         config.systemPrompt.takeIf { it.isNotBlank() }?.let { sections.add(it) }
 
         val assistant = _currentAssistant.value

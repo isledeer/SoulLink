@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,7 +71,7 @@ import com.isledeer.soullink.ui.liquidGlass
 private fun PageShell(
     title: String,
     onBack: () -> Unit,
-    content: @Composable Column.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -563,7 +564,7 @@ fun HelpScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun HelpSection(title: String, content: @Composable Column.() -> Unit) {
+private fun HelpSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
         SectionLabel(title)
         Column(
