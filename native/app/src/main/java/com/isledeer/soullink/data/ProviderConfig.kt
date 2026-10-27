@@ -27,6 +27,8 @@ data class ProviderConfig(
     /** 自定义请求头 / 请求体（JSON 对象字符串，高级设置 Tab 编辑） */
     val customHeaders: String = "{}",
     val customBodies: String = "{}",
+    /** 单模型更多设置：{"模型名": {alias/temperature/context/thinking/vision}} */
+    val modelSettingsJson: String = "{}",
 ) {
     fun modelList(): List<String> = AssistantEntity.parseStringArray(enabledModelsJson)
 }
@@ -117,6 +119,7 @@ data class AppSettings(
                                 apiPath = obj.optString("apiPath", "/chat/completions"),
                                 customHeaders = obj.optString("customHeaders", "{}"),
                                 customBodies = obj.optString("customBodies", "{}"),
+                                modelSettingsJson = obj.optString("modelSettingsJson", "{}"),
                             )
                         )
                     }

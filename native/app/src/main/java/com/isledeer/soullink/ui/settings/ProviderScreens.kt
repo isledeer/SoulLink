@@ -208,6 +208,7 @@ fun ProviderDetailScreen(
     var keyVisible by remember { mutableStateOf(false) }
     var fetchSheet by remember { mutableStateOf(false) }
     var addDialog by remember { mutableStateOf(false) }
+    var modelSettingsTarget by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Box(
@@ -249,7 +250,7 @@ fun ProviderDetailScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (tab) {
                     0 -> ConfigTab(provider, keyVisible, { keyVisible = !keyVisible }, onChange, onTest, testResult, testing)
-                    1 -> ModelsTab(provider, fetchedModels, onChange, { fetchSheet = true }, { addDialog = true })
+                    1 -> ModelsTab(provider, fetchedModels, onChange, { fetchSheet = true }, { addDialog = true }, { modelSettingsTarget = it })
                     2 -> AdvancedTab(provider, onChange)
                 }
             }
@@ -266,6 +267,15 @@ fun ProviderDetailScreen(
                     fetchSheet = false
                 },
                 onDismiss = { fetchSheet = false },
+            )
+        }
+
+        modelSettingsTarget?.let { target ->
+            ModelSettingsSheet(
+                provider = provider,
+                model = target,
+                onChange = onChange,
+                onDismiss = { modelSettingsTarget = null },
             )
         }
 
@@ -366,6 +376,7 @@ private fun ModelsTab(
     onChange: (ProviderConfig) -> Unit,
     onOpenFetch: () -> Unit,
     onOpenAdd: () -> Unit,
+    onOpenModelSettings: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -388,26 +399,13 @@ private fun ModelsTab(
                         Text("聊天", color = GlassTokens.TextSecondary.copy(alpha = 0.6f), fontSize = 10.sp)
                     }
                     Box {
-                        var menu by remember { mutableStateOf(false) }
                         Box(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .clickable { menu = true },
+                                .clickable { onOpenModelSettings(model) },
                             contentAlignment = Alignment.Center,
                         ) { Icon(Icons.Outlined.MoreVert, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(16.dp)) }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(
-                                text = { Text("移除", color = GlassTokens.Accent) },
-                                onClick = {
-                                    val list = provider.modelList() - model
-                                    val array = org.json.JSONArray()
-                                    list.forEach { array.put(it) }
-                                    onChange(provider.copy(enabledModelsJson = array.toString()))
-                                    menu = false
-                                },
-                            )
-                        }
                     }
                 }
             }
@@ -498,6 +496,7 @@ private fun FetchModelsSheet(
     var all by remember { mutableStateOf<List<String>?>(null) }
     var checked by remember { mutableStateOf(initialChecked.toMutableSet()) }
     var error by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         val result = fetch()
@@ -526,7 +525,8 @@ private fun FetchModelsSheet(
                 ) { CircularProgressIndicator(color = GlassTokens.Primary, modifier = Modifier.size(26.dp)) }
                 models.isEmpty() -> Text("没有拉到模型，可点右上角添加", color = GlassTokens.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 12.dp))
                 else -> LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
-                    items(models, key = { it }) { model ->
+                    val visible = if (query.isBlank()) models else models.filter { it.contains(query, ignoreCase = true) }
+                    items(visible, key = { it }) { model ->
                         val isChecked = checked.contains(model)
                         Row(
                             modifier = Modifier
@@ -538,13 +538,38 @@ private fun FetchModelsSheet(
                                 .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Checkbox(checked = isChecked, onCheckedChange = null)
-                            Text(model, color = GlassTokens.TextPrimary, fontSize = 13.sp, maxLines = 1)
+                            Text(model, color = GlassTokens.TextPrimary, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = if (isChecked) Icons.Outlined.Check else Icons.Outlined.Add,
+                                contentDescription = null,
+                                tint = if (isChecked) GlassTokens.Primary else GlassTokens.TextSecondary,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                     }
                 }
             }
 
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                placeholder = {
+                    Text("搜索模型名", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0x14FFFFFF),
+                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedTextColor = GlassTokens.TextPrimary,
+                    unfocusedTextColor = GlassTokens.TextPrimary,
+                    cursorColor = GlassTokens.Primary,
+                    focusedIndicatorColor = GlassTokens.Primary.copy(alpha = 0.6f),
+                    unfocusedIndicatorColor = Color(0x1FFFFFFF),
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = { onConfirm(checked.toList()) },
@@ -641,3 +666,144 @@ private fun jsonMap(json: String): Map<String, String> = runCatching {
     val obj = org.json.JSONObject(json)
     obj.keys().asSequence().associateWith { key -> obj.optString(key) }
 }.getOrElse { emptyMap() }
+
+
+/* ------------------------- 模型更多设置 Sheet ------------------------- */
+
+private fun modelSettings(provider: ProviderConfig, model: String): org.json.JSONObject {
+    val root = runCatching { org.json.JSONObject(provider.modelSettingsJson) }.getOrNull()
+        ?: org.json.JSONObject()
+    return root.optJSONObject(model) ?: org.json.JSONObject()
+}
+
+private fun withModelSettings(
+    provider: ProviderConfig,
+    model: String,
+    obj: org.json.JSONObject,
+): ProviderConfig {
+    val root = runCatching { org.json.JSONObject(provider.modelSettingsJson) }.getOrNull()
+        ?: org.json.JSONObject()
+    root.put(model, obj)
+    return provider.copy(modelSettingsJson = root.toString())
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModelSettingsSheet(
+    provider: ProviderConfig,
+    model: String,
+    onChange: (ProviderConfig) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val initial = remember(model, provider.modelSettingsJson) { modelSettings(provider, model) }
+    var alias by remember(model, provider.modelSettingsJson) { mutableStateOf(initial.optString("alias", "")) }
+    var temperature by remember(model, provider.modelSettingsJson) { mutableFloatStateOf(initial.optDouble("temperature", 0.8).toFloat()) }
+    var context by remember(model, provider.modelSettingsJson) { mutableStateOf(initial.optInt("context", 0).toString()) }
+    var thinking by remember(model, provider.modelSettingsJson) { mutableStateOf(initial.optBoolean("thinking", false)) }
+    var vision by remember(model, provider.modelSettingsJson) { mutableStateOf(initial.optBoolean("vision", false)) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { it != SheetValue.Hidden },
+        ),
+        containerColor = GlassTokens.BackgroundBottom,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text(model, color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+
+            Text("别名", color = GlassTokens.TextSecondary, fontSize = 11.sp)
+            OutlinedTextField(
+                value = alias,
+                onValueChange = { alias = it },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                placeholder = {
+                    Text("显示名称（留空用原名）", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0x14FFFFFF),
+                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedTextColor = GlassTokens.TextPrimary,
+                    unfocusedTextColor = GlassTokens.TextPrimary,
+                    cursorColor = GlassTokens.Primary,
+                    focusedIndicatorColor = GlassTokens.Primary.copy(alpha = 0.6f),
+                    unfocusedIndicatorColor = Color(0x1FFFFFFF),
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(12.dp))
+            Text("温度 ${((temperature * 100).toInt() / 100.0)}", color = GlassTokens.TextSecondary, fontSize = 11.sp)
+            Slider(value = temperature, onValueChange = { temperature = it }, valueRange = 0f..2f)
+
+            Spacer(Modifier.height(8.dp))
+            Text("上下文长度（0 = 使用默认）", color = GlassTokens.TextSecondary, fontSize = 11.sp)
+            OutlinedTextField(
+                value = context,
+                onValueChange = { context = it.filter { ch -> ch.isDigit() } },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0x14FFFFFF),
+                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedTextColor = GlassTokens.TextPrimary,
+                    unfocusedTextColor = GlassTokens.TextPrimary,
+                    cursorColor = GlassTokens.Primary,
+                    focusedIndicatorColor = GlassTokens.Primary.copy(alpha = 0.6f),
+                    unfocusedIndicatorColor = Color(0x1FFFFFFF),
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("思考能力", color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Switch(checked = thinking, onCheckedChange = { thinking = it })
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("视觉能力", color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Switch(checked = vision, onCheckedChange = { vision = it })
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    val obj = org.json.JSONObject()
+                        .put("alias", alias.trim())
+                        .put("temperature", temperature.toDouble())
+                        .put("context", context.toIntOrNull() ?: 0)
+                        .put("thinking", thinking)
+                        .put("vision", vision)
+                    onChange(withModelSettings(provider, model, obj))
+                    onDismiss()
+                },
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("保存设置", fontSize = 13.sp) }
+
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = {
+                    val list = provider.modelList() - model
+                    val array = org.json.JSONArray()
+                    list.forEach { array.put(it) }
+                    onChange(provider.copy(enabledModelsJson = array.toString()))
+                    onDismiss()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("移除模型", color = GlassTokens.Accent, fontSize = 13.sp) }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
