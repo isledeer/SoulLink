@@ -237,6 +237,8 @@ private suspend fun buildBackupJson(db: AppDatabase, settingsRepo: SettingsRepos
         messages += db.messageTreeDao().loadAllMessages(conversation.id)
     }
     val events = sessions.flatMap { db.gameEventDao().forSession(it.id) }
+    val worldbooks = db.worldBookDao().loadAll()
+    val worldEntries = worldbooks.flatMap { db.worldBookDao().entriesOf(it.id) }
     val settingsJson = runBlocking { settingsRepo.flow.first().toJson() }
 
     JSONObject()
@@ -304,6 +306,26 @@ private suspend fun buildBackupJson(db: AppDatabase, settingsRepo: SettingsRepos
                         .put("usageTokens", message.usageTokens).put("generationSpeed", message.generationSpeed)
                         .put("isError", message.isError).put("isFavorite", message.isFavorite)
                         .put("createdAt", message.createdAt)
+                )
+            }
+        })
+        .put("worldbooks", JSONArray().also { array ->
+            worldbooks.forEach { book ->
+                array.put(
+                    JSONObject()
+                        .put("id", book.id).put("title", book.title).put("template", book.template)
+                        .put("docJson", book.docJson)
+                        .put("createdAt", book.createdAt).put("updatedAt", book.updatedAt)
+                )
+            }
+        })
+        .put("worldEntries", JSONArray().also { array ->
+            worldEntries.forEach { entry ->
+                array.put(
+                    JSONObject()
+                        .put("id", entry.id).put("worldbookId", entry.worldbookId)
+                        .put("keysJson", entry.keysJson).put("content", entry.content)
+                        .put("alwaysOn", entry.alwaysOn).put("priority", entry.priority)
                 )
             }
         })
@@ -435,6 +457,38 @@ private suspend fun restoreFromJson(db: AppDatabase, settingsRepo: SettingsRepos
                 }
             }
 
+            root.optJSONArray("worldbooks")?.let { array ->
+                for (i in 0 until array.length()) {
+                    val obj = array.optJSONObject(i) ?: continue
+                    db.worldBookDao().upsert(
+                        com.isledeer.soullink.data.WorldBookEntity(
+                            id = obj.optString("id"),
+                            title = obj.optString("title"),
+                            template = obj.optString("template", "custom"),
+                            docJson = obj.optString("docJson", "{}"),
+                            createdAt = obj.optLong("createdAt"),
+                            updatedAt = obj.optLong("updatedAt"),
+                        )
+                    )
+                }
+            }
+
+            root.optJSONArray("worldEntries")?.let { array ->
+                for (i in 0 until array.length()) {
+                    val obj = array.optJSONObject(i) ?: continue
+                    db.worldBookDao().upsertEntry(
+                        com.isledeer.soullink.data.WorldEntryEntity(
+                            id = obj.optString("id"),
+                            worldbookId = obj.optString("worldbookId"),
+                            keysJson = obj.optString("keysJson", "[]"),
+                            content = obj.optString("content"),
+                            alwaysOn = obj.optBoolean("alwaysOn"),
+                            priority = obj.optInt("priority"),
+                        )
+                    )
+                }
+            }
+
             root.optJSONArray("events")?.let { array ->
                 for (i in 0 until array.length()) {
                     val obj = array.optJSONObject(i) ?: continue
@@ -537,11 +591,19 @@ fun StorageScreen(onBack: () -> Unit) {
                             confirmVisible = false
                             scope.launch {
                                 withContext(Dispatchers.IO) {
+                                    val sessionIds = db.conversationDao().loadAll()
+                                        .mapNotNull { it.sessionId }
+                                        .distinct()
                                     db.conversationDao().loadAll().forEach { conversation ->
                                         db.messageTreeDao().clearMessages(conversation.id)
                                         db.messageTreeDao().clearNodes(conversation.id)
                                         db.gameEventDao().deleteForConversation(conversation.id)
                                         db.conversationDao().delete(conversation.id)
+                                    }
+                                    sessionIds.forEach { sessionId -> db.gameSessionDao().delete(sessionId) }
+                                    db.worldBookDao().loadAll().forEach { book ->
+                                        db.worldBookDao().clearEntries(book.id)
+                                        db.worldBookDao().delete(book.id)
                                     }
                                     db.assistantDao().loadAll().forEach { assistant ->
                                         if (assistant.id != AssistantEntity.DEFAULT_ID) {
