@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 /**
  * Provider 管理 + 功能绑定 + 连通性测试。
@@ -50,18 +49,24 @@ class SettingsViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            repository.flow.first()?.let { _state.value = it }
+            // 只在本地还没有任何编辑时回填，避免覆盖用户刚做的改动（如刚新建的 Provider）
+            if (_state.value.providers.isEmpty() && _state.value.bindings.isEmpty()) {
+                repository.flow.first()?.let { _state.value = it }
+            }
         }
     }
 
-    fun addProvider() {
+    /** 新建一个带默认值的 Provider，返回其 id（供导航进详情页） */
+    fun addProvider(): String {
         val provider = ProviderConfig(
-            id = "p-${System.currentTimeMillis()}-${Random.nextInt(100, 999)}",
+            id = java.util.UUID.randomUUID().toString(),
             name = "新提供商",
             baseUrl = "",
             apiKey = "",
+            enabled = true,
         )
         _state.value = _state.value.copy(providers = _state.value.providers + provider)
+        return provider.id
     }
 
     fun updateProvider(updated: ProviderConfig) {
