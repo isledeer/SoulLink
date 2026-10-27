@@ -270,14 +270,14 @@ fun WorldBookEditScreen(
     val context = LocalContext.current
     val doc = remember(book.id, book.docJson) { WorldDoc.parse(book.docJson) }
 
-    var title by remember(book.id) { mutableStateOf(doc.title.ifBlank { book.title }) }
-    var premise by remember(book.id) { mutableStateOf(doc.premise) }
-    var setting by remember(book.id) { mutableStateOf(doc.setting) }
-    var rules by remember(book.id) { mutableStateOf(doc.rules.joinToString("\n")) }
-    var tone by remember(book.id) { mutableStateOf(doc.tone) }
-    var scene by remember(book.id) { mutableStateOf(doc.openingScene) }
-    var situation by remember(book.id) { mutableStateOf(doc.openingSituation) }
-    var advancedText by remember(book.id) { mutableStateOf(book.docJson) }
+    var title by remember(book.id, book.docJson) { mutableStateOf(doc.title.ifBlank { book.title }) }
+    var premise by remember(book.id, book.docJson) { mutableStateOf(doc.premise) }
+    var setting by remember(book.id, book.docJson) { mutableStateOf(doc.setting) }
+    var rules by remember(book.id, book.docJson) { mutableStateOf(doc.rules.joinToString("\n")) }
+    var tone by remember(book.id, book.docJson) { mutableStateOf(doc.tone) }
+    var scene by remember(book.id, book.docJson) { mutableStateOf(doc.openingScene) }
+    var situation by remember(book.id, book.docJson) { mutableStateOf(doc.openingSituation) }
+    var advancedText by remember(book.id, book.docJson) { mutableStateOf(book.docJson) }
     var localEntries by remember(book.id, entries) { mutableStateOf(entries) }
     var entryEditing by remember { mutableStateOf<WorldEntryEntity?>(null) }
     var addingEntry by remember { mutableStateOf(false) }

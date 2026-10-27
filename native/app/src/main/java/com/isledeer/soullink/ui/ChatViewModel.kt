@@ -17,6 +17,7 @@ import com.isledeer.soullink.data.GameSessionEntity
 import com.isledeer.soullink.data.GameState
 import com.isledeer.soullink.data.MessageParts
 import com.isledeer.soullink.data.MessageTreeRepository
+import com.isledeer.soullink.data.McpServerConfig
 import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.data.ResolvedConfig
 import com.isledeer.soullink.data.SettingsRepository
@@ -26,8 +27,11 @@ import com.isledeer.soullink.data.WorldDoc
 import com.isledeer.soullink.data.WorldNpc
 import com.isledeer.soullink.data.WorldbookPrompt
 import com.isledeer.soullink.data.isGameEnabled
+import com.isledeer.soullink.data.parseMcpServers
 import com.isledeer.soullink.net.ChatRequest
 import com.isledeer.soullink.net.ChatTurn
+import com.isledeer.soullink.net.McpClient
+import com.isledeer.soullink.net.McpToolInfo
 import com.isledeer.soullink.net.SearchService
 import com.isledeer.soullink.net.SseClient
 import com.isledeer.soullink.net.SseEvent
@@ -63,6 +67,7 @@ class ChatViewModel(
     private val speaker: Speaker,
     private val searchService: SearchService,
     private val worldBookDao: WorldBookDao,
+    private val mcpClient: McpClient,
 ) : ViewModel() {
 
     private val _settings = MutableStateFlow(AppSettings())
@@ -91,6 +96,10 @@ class ChatViewModel(
     private var gameActive = false
     private var activeSession: GameSessionEntity? = null
     private val pendingGameActions = mutableListOf<GameAction>()
+
+    /** MCP：serverId -> (缓存时间, 工具列表)；exposedName -> (server, tool) */
+    private val mcpTools = mutableMapOf<String, Pair<Long, List<McpToolInfo>>>()
+    private val mcpToolIndex = mutableMapOf<String, Pair<McpServerConfig, McpToolInfo>>()
 
     /** 记忆摘要：conversationId -> (覆盖标记, 摘要文本)；标记 "manual" = /compact 手动压缩 */
     private val memoryCache = mutableMapOf<String, Pair<String, String>>()
@@ -580,6 +589,7 @@ class ChatViewModel(
         }
         val finalSystemPrompt = buildEnhancedPrompt(conversation, config, usable)
         val turns = buildTurns(config)
+        val mcpSchemas = prepareMcpTools()
         val startedAt = SystemClock.elapsedRealtime()
         var usageTokens = 0
         var receivedChars = 0
@@ -883,6 +893,46 @@ class ChatViewModel(
         }
     }
 
+    /** 拉取 MCP 工具（5 分钟缓存）并转成 OpenAI function schema */
+    private suspend fun prepareMcpTools(): List<JSONObject> {
+        val assistant = _currentAssistant.value ?: return emptyList()
+        val enabledIds = assistant.mcpList()
+        if (enabledIds.isEmpty()) return emptyList()
+
+        val servers = parseMcpServers(_settings.value.mcpServersJson)
+            .filter { it.id in enabledIds && it.url.isNotBlank() }
+        mcpToolIndex.clear()
+        val schemas = mutableListOf<JSONObject>()
+        val now = System.currentTimeMillis()
+
+        for (server in servers) {
+            val cached = mcpTools[server.id]
+            val tools = if (cached != null && now - cached.first < 5 * 60 * 1000L) {
+                cached.second
+            } else {
+                val fetched = mcpClient.listTools(server).getOrNull() ?: continue
+                mcpTools[server.id] = now to fetched
+                fetched
+            }
+            tools.forEach { tool ->
+                val exposed = "mcp_" + server.id.take(6) + "_" + tool.name
+                mcpToolIndex[exposed] = server to tool
+                schemas.add(
+                    JSONObject()
+                        .put("type", "function")
+                        .put(
+                            "function",
+                            JSONObject()
+                                .put("name", exposed)
+                                .put("description", "[MCP·${server.name}] ${tool.description}".take(400))
+                                .put("parameters", tool.inputSchema)
+                        )
+                )
+            }
+        }
+        return schemas
+    }
+
     /** 记忆 + 联网搜索增强段（请求前拼好，不污染消息树） */
     private suspend fun buildEnhancedPrompt(
         conversation: Conversation,
@@ -1054,6 +1104,15 @@ class ChatViewModel(
             if (!action.isEmpty) pendingGameActions.add(action)
             return ToolTurnResult(call.id, "已记录", null)
         }
+
+        // MCP 工具：按暴露名路由到对应服务器
+        val mcpEntry = mcpToolIndex[call.name]
+        if (mcpEntry != null) {
+            val args = runCatching { JSONObject(call.arguments) }.getOrDefault(JSONObject())
+            val result = mcpClient.callTool(mcpEntry.first, mcpEntry.second.name, args).getOrNull()
+            return ToolTurnResult(call.id, result ?: "MCP 工具调用失败", null)
+        }
+
         val tool = tools.byName(call.name)
         val result = if (tool == null) {
             "未知工具：${call.name}"

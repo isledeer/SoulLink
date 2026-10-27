@@ -36,9 +36,10 @@ val appModule = module {
     // 网络
     single { SseClient() }
     single { SearchService() }
+    single { com.isledeer.soullink.net.McpClient() }
 
     // ViewModel
-    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { AssistantViewModel(get(), get(), get()) }
     viewModel { com.isledeer.soullink.ui.worldbook.WorldbookViewModel(get(), get(), get(), get(), get(), get()) }
