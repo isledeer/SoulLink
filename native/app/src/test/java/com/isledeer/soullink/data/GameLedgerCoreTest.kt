@@ -89,8 +89,8 @@ class GameLedgerCoreTest {
         val state = GameStateOps.fold(GameState.EMPTY, events, ids("m1", "m2", "m3"))
         assertEquals(10, state.relations["self"] ?: -1)
 
-        val high = (1..12).map { relation("h$it", 10) }
-        val all = GameStateOps.fold(GameState.EMPTY, high, high.map { "h$it" }.toSet())
+        val high = (1..12).map { n -> relation("h$n", 10) }
+        val all = GameStateOps.fold(GameState.EMPTY, high, (1..12).map { n -> "h$n" }.toSet())
         assertEquals(100, all.relations["self"] ?: -1)
 
         val low = listOf(relation("l1", -10), relation("l2", -10))
