@@ -8,6 +8,7 @@ enum class Feature(val label: String) {
     CHAT("对话"),
     TRANSLATE("翻译"),
     OCR("识图"),
+    IMAGE("生图"),
 }
 
 data class ProviderConfig(
@@ -138,6 +139,7 @@ data class AppSettings(
             .put("defaultMaxTokens", defaultMaxTokens)
             .put("searchKeys", JSONObject(searchKeys))
             .put("colorMode", colorMode)
+            .put("defaultPrompt", defaultPrompt)
             .put("ttsRate", ttsRate.toDouble())
             .put("ttsPitch", ttsPitch.toDouble())
             .put("mcpServersJson", mcpServersJson)
