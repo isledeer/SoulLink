@@ -198,6 +198,8 @@ fun ProviderDetailScreen(
     fetchedModels: List<String>,
     testResult: String?,
     testing: Boolean,
+    balanceText: String?,
+    onQueryBalance: () -> Unit,
     onChange: (ProviderConfig) -> Unit,
     onTest: () -> Unit,
     fetchModels: suspend () -> Result<List<String>>,
@@ -249,7 +251,17 @@ fun ProviderDetailScreen(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (tab) {
-                    0 -> ConfigTab(provider, keyVisible, { keyVisible = !keyVisible }, onChange, onTest, testResult, testing)
+                    0 -> ConfigTab(
+                        provider = provider,
+                        keyVisible = keyVisible,
+                        onToggleKey = { keyVisible = !keyVisible },
+                        onChange = onChange,
+                        onTest = onTest,
+                        testResult = testResult,
+                        testing = testing,
+                        balanceText = balanceText,
+                        onQueryBalance = onQueryBalance,
+                    )
                     1 -> ModelsTab(provider, fetchedModels, onChange, { fetchSheet = true }, { addDialog = true }, { modelSettingsTarget = it })
                     2 -> AdvancedTab(provider, onChange)
                 }
@@ -323,6 +335,8 @@ private fun ConfigTab(
     onTest: () -> Unit,
     testResult: String?,
     testing: Boolean,
+    balanceText: String?,
+    onQueryBalance: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -353,6 +367,22 @@ private fun ConfigTab(
             Icon(Icons.Outlined.Sync, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(16.dp))
         }) { onChange(provider.copy(baseUrl = it)) }
         TextFieldCard("API 路径", provider.apiPath) { onChange(provider.copy(apiPath = it)) }
+        TextFieldCard("余额查询 URL（可选）", provider.balanceUrl) { onChange(provider.copy(balanceUrl = it)) }
+        TextFieldCard("余额 JSON 路径（如 data.balance）", provider.balanceJsonPath) { onChange(provider.copy(balanceJsonPath = it)) }
+        Spacer(Modifier.height(6.dp))
+        Button(
+            onClick = onQueryBalance,
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = GlassTokens.Primary.copy(alpha = 0.2f),
+                contentColor = GlassTokens.Primary,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("查询余额", fontSize = 13.sp) }
+
+        balanceText?.let {
+            Text(it, color = GlassTokens.Primary, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+        }
 
         Spacer(Modifier.height(12.dp))
         Button(

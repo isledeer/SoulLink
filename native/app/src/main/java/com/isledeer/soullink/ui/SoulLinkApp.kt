@@ -460,6 +460,7 @@ private fun ProviderDetailRoute(
     val fetchedModels by viewModel.fetchedModels.collectAsStateWithLifecycle()
     val testingId by viewModel.testing.collectAsStateWithLifecycle()
     val testResult by viewModel.testResult.collectAsStateWithLifecycle()
+    val balanceText by viewModel.balanceText.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -490,6 +491,8 @@ private fun ProviderDetailRoute(
         fetchedModels = fetchedModels[providerId].orEmpty(),
         testResult = if (testingId == providerId) testResult else null,
         testing = testingId == providerId,
+        balanceText = balanceText,
+        onQueryBalance = { viewModel.queryBalance(provider) },
         onChange = viewModel::updateProvider,
         onTest = { viewModel.test(provider) },
         fetchModels = { viewModel.fetchModels(provider) },

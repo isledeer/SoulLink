@@ -23,7 +23,7 @@ import kotlinx.coroutines.runBlocking
  * v3 架构：聊天、设置、世界书全部由 Compose 绘制；
  * 全屏 WebView（LocalAssetServer + Http 内核）已废弃，
  * 相关类（LocalAssetServer / WebAppInterface / NativeSSE）暂时保留在工程里，
- * 将来只供 WorldBookScreen 挂世界书面板时按需复用。
+ * 世界书已改为原生 Compose 页面（worldbook 路由），这些类仅留档。
  *
  * 这里只做三件事：
  *   1. 按持久化的颜色模式应用色板（system / dark / light）
