@@ -50,6 +50,8 @@ data class ChatRequest(
     val extraBody: Map<String, String> = emptyMap(),
     /** 请求 usage 统计（部分网关不认识该字段，VM 侧会降级重试） */
     val includeUsage: Boolean = true,
+    /** 思考深度：OFF / LOW / MEDIUM / HIGH / XHIGH（非 OFF 时下发 reasoning_effort） */
+    val thinking: String = "OFF",
 )
 
 private class ToolFragment {
@@ -317,6 +319,11 @@ class SseClient(
 
         if (stream && req.includeUsage) {
             body.put("stream_options", JSONObject().put("include_usage", true))
+        }
+
+        // 思考深度：多数网关认 reasoning_effort（low/medium/high），原样下发
+        if (req.thinking != "OFF") {
+            body.put("reasoning_effort", req.thinking.lowercase())
         }
 
         if (req.toolSchemas.isNotEmpty()) {

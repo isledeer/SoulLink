@@ -426,7 +426,10 @@ fun ChatScreen(
                 }
                 context.startActivity(Intent.createChooser(intent, "分享"))
             },
-            onBranch = { onBranch(target.id) },
+            onBranch = {
+                onBranch(target.id)
+                notice = "已创建分支，去抽屉切换会话"
+            },
             onFavorite = { onToggleFavorite(target.id) },
             onDelete = { onDeleteMessage(target.id) },
         )

@@ -617,7 +617,8 @@ class ChatViewModel(
                             maxTokens = config.maxTokens,
                             temperature = config.temperature,
                             topP = config.topP,
-                            toolSchemas = toolSchemas(config.tools),
+                            toolSchemas = toolSchemas(config.tools) + mcpSchemas,
+                            thinking = _thinkingLevel.value,
                             extraHeaders = config.headers,
                             extraBody = config.bodyExtras,
                         )
@@ -1008,6 +1009,7 @@ class ChatViewModel(
                 }.getOrNull()?.trim()
                 if (!summary.isNullOrBlank()) {
                     memoryCache[conversation.id] = upTo to summary
+                    _memorySummary.value = summary
                     parts.add("【历史记忆】\n$summary")
                 }
             }
