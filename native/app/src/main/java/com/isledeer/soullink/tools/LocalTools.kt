@@ -33,7 +33,7 @@ class LocalTools(private val context: Context) {
      *  非 suspend：executor 统一是普通 lambda，suspend 调用在注入侧用 runBlocking 消化。 */
     var imageGenerator: ((String) -> String?)? = null
 
-    val all: List<LocalTool> = listOf(timeTool(), clipboardTool(), imageTool())
+    val all: List<LocalTool> = listOf(timeTool(), clipboardTool(), imageTool(), gameTool())
 
     fun byId(id: String): LocalTool? = all.firstOrNull { it.id == id }
 

@@ -55,6 +55,22 @@ object MessageParts {
         }
         found
     }.getOrNull()
+
+    /** 读取 ABCD 选项（没有就是空列表） */
+    fun choices(parts: String): List<String> = runCatching {
+        val array = JSONArray(parts)
+        val list = mutableListOf<String>()
+        for (i in 0 until array.length()) {
+            val obj = array.optJSONObject(i) ?: continue
+            if (obj.optString("type") != "choices") continue
+            val items = obj.optJSONArray("items") ?: continue
+            for (j in 0 until items.length()) {
+                val text = items.optString(j)
+                if (text.isNotBlank()) list.add(text)
+            }
+        }
+        list
+    }.getOrElse { emptyList() }
 }
 
 /**
