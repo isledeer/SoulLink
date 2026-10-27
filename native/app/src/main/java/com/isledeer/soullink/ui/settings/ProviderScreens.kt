@@ -533,7 +533,7 @@ private fun FetchModelsSheet(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable {
-                                    checked = if (isChecked) checked - model else checked + model
+                                    checked = if (isChecked) (checked - model).toMutableSet() else (checked + model).toMutableSet()
                                 }
                                 .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
