@@ -158,11 +158,6 @@ fun SettingsOverviewScreen(
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(text, color = GlassTokens.TextSecondary, fontSize = 11.sp, modifier = Modifier.padding(start = 14.dp, top = 14.dp, bottom = 6.dp))
-}
-
-@Composable
 private fun OverviewRow(
     icon: ImageVector,
     title: String,
