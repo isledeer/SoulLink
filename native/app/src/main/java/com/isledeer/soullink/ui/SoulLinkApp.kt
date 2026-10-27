@@ -12,6 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +63,7 @@ import com.isledeer.soullink.ui.settings.WebServerScreen
 import com.isledeer.soullink.ui.worldbook.WorldBookEditScreen
 import com.isledeer.soullink.ui.worldbook.WorldBookListScreen
 import com.isledeer.soullink.ui.worldbook.WorldbookViewModel
+import com.isledeer.soullink.ui.components.AuroraBackground
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
@@ -102,6 +107,10 @@ fun SoulLinkApp() {
     NavHost(
         navController = navController,
         startDestination = Routes.CHAT,
+        enterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(240)) { it / 16 } },
+        exitTransition = { fadeOut(tween(180)) },
+        popEnterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(240)) { -it / 16 } },
+        popExitTransition = { fadeOut(tween(180)) },
     ) {
         composable(Routes.CHAT) {
             ChatRoute(

@@ -13,8 +13,8 @@ android {
         applicationId = "com.isledeer.soullink"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0-native"
+        versionCode = 3
+        versionName = "1.2.0-aurora"
     }
 
     buildTypes {

@@ -140,7 +140,7 @@ fun WorldBookListScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(GlassTokens.Divider)
                 .clickable { importVisible = true }
                 .padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.Center,
@@ -205,7 +205,7 @@ private fun CreateWorldDialog(
                         fontSize = 11.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.06f))
+                            .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else GlassTokens.Divider)
                             .clickable { template = id }
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                     )
@@ -364,7 +364,7 @@ fun WorldBookEditScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(GlassTokens.Divider)
                 .clickable { addingEntry = true }
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.Center,
@@ -560,8 +560,8 @@ private fun WorldField(
 
 @Composable
 private fun worldFieldColors() = TextFieldDefaults.colors(
-    focusedContainerColor = Color(0x14FFFFFF),
-    unfocusedContainerColor = Color(0x0DFFFFFF),
+    focusedContainerColor = GlassTokens.FieldBgFocused,
+    unfocusedContainerColor = GlassTokens.FieldBg,
     focusedTextColor = GlassTokens.TextPrimary,
     unfocusedTextColor = GlassTokens.TextPrimary,
     cursorColor = GlassTokens.Primary,

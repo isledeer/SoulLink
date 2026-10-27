@@ -31,7 +31,7 @@ data class ProviderConfig(
     /** 单模型更多设置：{"模型名": {alias/temperature/context/thinking/vision}} */
     val modelSettingsJson: String = "{}",
 ) {
-    fun modelList(): List<String> = AssistantEntity.parseStringArray(enabledModelsJson)
+    fun modelList(): List<String> = AssistantEntity.parseStringArray(enabledModelsJson).distinct()
 }
 
 data class FeatureBinding(
@@ -119,6 +119,14 @@ data class AppSettings(
                     .put("name", p.name)
                     .put("baseUrl", p.baseUrl)
                     .put("apiKey", p.apiKey)
+                    .put("balanceUrl", p.balanceUrl)
+                    .put("balanceJsonPath", p.balanceJsonPath)
+                    .put("enabledModelsJson", p.enabledModelsJson)
+                    .put("enabled", p.enabled)
+                    .put("apiPath", p.apiPath)
+                    .put("customHeaders", p.customHeaders)
+                    .put("customBodies", p.customBodies)
+                    .put("modelSettingsJson", p.modelSettingsJson)
             )
         }
 

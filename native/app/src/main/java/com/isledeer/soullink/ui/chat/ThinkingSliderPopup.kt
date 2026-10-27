@@ -61,7 +61,7 @@ fun ThinkingSliderPopup(
         Column(
             modifier = Modifier
                 .width(240.dp)
-                .background(Color(0xE61E1E1E), RoundedCornerShape(16.dp))
+                .background(GlassTokens.MenuBg, RoundedCornerShape(16.dp))
                 .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)), RoundedCornerShape(16.dp))
                 .padding(14.dp)
         ) {

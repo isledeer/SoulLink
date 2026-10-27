@@ -35,6 +35,7 @@ import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.chat.BrandIcon
 import com.isledeer.soullink.ui.liquidGlass
+import com.isledeer.soullink.ui.components.AuroraBackground
 import kotlinx.coroutines.launch
 
 @Composable
@@ -74,15 +75,9 @@ fun ProviderListScreen(
     onDelete: (String) -> Unit,
     onSave: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             headerBar("提供商", onBack) {
                 Box(
@@ -143,7 +138,7 @@ private fun ProviderRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f)),
+                .background(GlassTokens.Divider),
             contentAlignment = Alignment.Center,
         ) { BrandIcon(modelName = provider.name, size = 22.dp) }
 
@@ -213,15 +208,9 @@ fun ProviderDetailScreen(
     var modelSettingsTarget by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             headerBar(provider.name.ifBlank { "未命名" }, onBack) {
                 Box(
@@ -295,7 +284,7 @@ fun ProviderDetailScreen(
             var name by remember { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = { addDialog = false },
-                containerColor = GlassTokens.BackgroundBottom,
+                containerColor = GlassTokens.SheetBg,
                 title = { Text("添加新模型", color = GlassTokens.TextPrimary, fontSize = 15.sp) },
                 text = {
                     OutlinedTextField(
@@ -540,7 +529,7 @@ private fun FetchModelsSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { it != SheetValue.Hidden },
         ),
-        containerColor = GlassTokens.BackgroundBottom,
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text("可用模型", color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -590,8 +579,8 @@ private fun FetchModelsSheet(
                     Text("搜索模型名", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,
@@ -659,8 +648,8 @@ private fun TextFieldCard(
                 shape = RoundedCornerShape(12.dp),
                 visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,
@@ -738,7 +727,7 @@ private fun ModelSettingsSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { it != SheetValue.Hidden },
         ),
-        containerColor = GlassTokens.BackgroundBottom,
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(model, color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -754,8 +743,8 @@ private fun ModelSettingsSheet(
                     Text("显示名称（留空用原名）", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,
@@ -777,8 +766,8 @@ private fun ModelSettingsSheet(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,

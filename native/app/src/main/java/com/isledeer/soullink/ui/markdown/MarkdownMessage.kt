@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.isledeer.soullink.ui.GlassTokens
 import androidx.compose.ui.viewinterop.AndroidView
 
 /**
@@ -119,7 +121,7 @@ private fun inlineStyle(text: String): AnnotatedString = buildAnnotatedString {
                     withStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
-                            background = Color(0x22FFFFFF),
+                            background = GlassTokens.GlassFill,
                         )
                     ) { append(text.substring(i + 1, end)) }
                     i = end + 1
@@ -181,7 +183,7 @@ fun CodeBlockView(code: String) {
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0x1AFFFFFF))
+            .background(GlassTokens.GlassFill)
             .padding(10.dp)
     ) {
         Row(
@@ -189,10 +191,10 @@ fun CodeBlockView(code: String) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("代码", color = Color(0x99CBD5E1), fontSize = 10.sp)
+            Text("代码", color = GlassTokens.TextSecondary, fontSize = 10.sp)
             Text(
                 text = if (copied) "已复制 ✓" else "复制",
-                color = Color(0x99CBD5E1),
+                color = GlassTokens.TextSecondary,
                 fontSize = 10.sp,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -205,7 +207,7 @@ fun CodeBlockView(code: String) {
         }
         Text(
             text = highlightCode(code),
-            color = Color(0xFFE2E8F0),
+            color = GlassTokens.TextPrimary,
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
             lineHeight = 18.sp,
@@ -273,9 +275,35 @@ private fun highlightCode(code: String): AnnotatedString = buildAnnotatedString 
     }
 }
 
-/** Mermaid 图表：WebView 注入 mermaid.js 渲染。离线时展示原始代码。 */
+/**
+ * Mermaid 图表：默认折叠（避免滚动到消息时在后台创建 WebView 造成卡顿/白屏），
+ * 点击后再注入 mermaid.js 渲染；离线时只展示代码。
+ */
 @Composable
 fun MermaidView(code: String, modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+    if (!expanded) {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(GlassTokens.GlassFill)
+                .clickable { expanded = true }
+                .padding(12.dp),
+        ) {
+            Text("流程图 · 点击渲染", color = GlassTokens.TextSecondary, fontSize = 10.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = code.take(120),
+                color = GlassTokens.TextSecondary,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 3,
+            )
+        }
+        return
+    }
+
     val html = remember(code) { mermaidHtml(code) }
     AndroidView(
         factory = { context ->

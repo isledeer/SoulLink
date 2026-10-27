@@ -95,7 +95,7 @@ fun AttachBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = GlassTokens.BackgroundBottom,
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             SheetHandle()
@@ -174,7 +174,7 @@ fun ToolsBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = GlassTokens.BackgroundBottom,
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             SheetHandle()
@@ -271,7 +271,7 @@ fun SlashCommandPopup(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xE61E1E1E)),
+            .background(GlassTokens.MenuBg),
     ) {
         SlashRow("/clear", Icons.Outlined.DeleteSweep) { onCommand("/clear"); onDismiss() }
         SlashRow("/compact", Icons.Outlined.Compress) { onCommand("/compact"); onDismiss() }
@@ -289,8 +289,8 @@ private fun SlashRow(
     DropdownMenuItem(
         text = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = Color(0xFFE5E7EB), fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Icon(icon, contentDescription = null, tint = Color(0xFFE5E7EB), modifier = Modifier.size(16.dp))
+                Text(label, color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Icon(icon, contentDescription = null, tint = GlassTokens.TextPrimary, modifier = Modifier.size(16.dp))
             }
         },
         onClick = onClick,
@@ -315,7 +315,7 @@ fun SearchEngineBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = GlassTokens.BackgroundBottom,
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             SheetHandle()

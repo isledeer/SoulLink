@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.liquidGlass
+import com.isledeer.soullink.ui.components.AuroraBackground
 
 /**
  * 设置中心总览页（对标 RikkaHub 分组结构）。
@@ -91,15 +92,9 @@ fun SettingsOverviewScreen(
     onOpenSponsor: () -> Unit,
     onOpenShare: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
@@ -176,7 +171,7 @@ private fun OverviewRow(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f)),
+                .background(GlassTokens.Divider),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(18.dp))
@@ -192,21 +187,27 @@ private fun OverviewRow(
 
 @Composable
 private fun ColorModeRow(selected: String, onSelect: (String) -> Unit) {
-    val modes = listOf("跟随系统" to Icons.Outlined.DarkMode, "浅色" to Icons.Outlined.LightMode, "深色" to Icons.Outlined.Palette)
+    val modes = listOf(
+        "跟随系统" to ("system" to Icons.Outlined.DarkMode),
+        "浅色" to ("light" to Icons.Outlined.LightMode),
+        "深色" to ("dark" to Icons.Outlined.Palette),
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        modes.forEach { (label, icon) ->
-            val active = label == selected
+        modes.forEach { (label, modeAndIcon) ->
+            val mode = modeAndIcon.first
+            val icon = modeAndIcon.second
+            val active = mode == selected
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (active) GlassTokens.Primary.copy(alpha = 0.2f) else Color.Transparent)
-                    .clickable { onSelect(label) }
+                    .clickable { onSelect(mode) }
                     .padding(vertical = 8.dp),
             ) {
                 Icon(icon, contentDescription = null, tint = if (active) GlassTokens.Primary else GlassTokens.TextSecondary, modifier = Modifier.size(18.dp))
@@ -229,15 +230,9 @@ fun SearchServiceScreen(
 ) {
     val engines = listOf("bing" to "必应", "bocha" to "博查", "tavily" to "Tavily", "exa" to "Exa")
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier

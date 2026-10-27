@@ -81,7 +81,7 @@ fun DrawerContent(
         modifier = Modifier
             .fillMaxHeight()
             .width(300.dp)
-            .background(GlassTokens.BackgroundBottom)
+            .background(GlassTokens.SheetBg)
             .padding(horizontal = 14.dp, vertical = 20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -222,7 +222,7 @@ fun MessageActionsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color(0xF2070B14),
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             SheetRow("复制", "拷贝正文到剪贴板", onCopy, onDismiss)
@@ -295,7 +295,7 @@ fun ConversationSettingsDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .liquidGlass(cornerRadius = 24.dp)
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.92f))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.92f))
                 .padding(20.dp)
         ) {
             Text("对话设置", color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -313,8 +313,8 @@ fun ConversationSettingsDialog(
                     Text("例如：你是…，始终以第一人称回答。", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 13.sp)
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,

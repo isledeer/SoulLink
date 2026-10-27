@@ -37,6 +37,7 @@ import com.isledeer.soullink.ui.components.Emphasized
 import com.isledeer.soullink.ui.components.EmphasizedText
 import com.isledeer.soullink.ui.components.UIAvatar
 import com.isledeer.soullink.ui.liquidGlass
+import com.isledeer.soullink.ui.components.AuroraBackground
 
 /**
  * 助手列表：搜索 + 卡片列表 + 新建。
@@ -53,15 +54,9 @@ fun AssistantListScreen(
     onClone: (AssistantEntity) -> Unit,
     onDelete: (String) -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

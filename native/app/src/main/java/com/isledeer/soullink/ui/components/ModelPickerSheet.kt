@@ -42,7 +42,7 @@ fun ModelPickerSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden },
         ),
-        containerColor = Color(0xF2070B14),
+        containerColor = GlassTokens.SheetBg,
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text("选择模型", color = GlassTokens.TextSecondary, fontSize = 12.sp)

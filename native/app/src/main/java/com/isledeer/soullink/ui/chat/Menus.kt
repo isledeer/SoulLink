@@ -35,8 +35,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.isledeer.soullink.ui.GlassTokens
 
-private val MENU_TEXT = Color(0xFFE5E7EB)
+private val MENU_TEXT: Color get() = GlassTokens.TextPrimary
 
 /**
  * 顶栏 ⋮ 下拉菜单（15 项全部接线，事件由 ChatScreen 绑定）。
@@ -66,8 +67,8 @@ fun TopBarDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
         modifier = Modifier
-            .background(Color(0xE61E1E1E), shape)
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)), shape),
+            .background(GlassTokens.MenuBg, shape)
+            .border(BorderStroke(1.dp, GlassTokens.GlassBorder), shape),
     ) {
         MenuRow(Icons.Outlined.Edit, "新建对话") { onNewChat(); onDismiss() }
         MenuRow(Icons.Outlined.Search, "在会话中搜索") { onSearch(); onDismiss() }
@@ -112,7 +113,7 @@ fun TopBarDropdownMenu(
 @Composable
 private fun MenuDivider() {
     HorizontalDivider(
-        color = Color.White.copy(alpha = 0.08f),
+        color = GlassTokens.Divider,
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -125,7 +126,7 @@ private fun MenuRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    val tint = if (danger) Color(0xFFF87171) else MENU_TEXT
+    val tint = if (danger) GlassTokens.Danger else MENU_TEXT
     DropdownMenuItem(
         text = {
             Row(verticalAlignment = Alignment.CenterVertically) {

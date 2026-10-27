@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -76,8 +77,8 @@ fun ChatInputBar(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF1E1E1E))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)), RoundedCornerShape(24.dp))
+            .background(GlassTokens.InputBg)
+            .border(BorderStroke(1.dp, GlassTokens.GlassBorder), RoundedCornerShape(24.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         /* 第一行：文本 + 语音 */
@@ -179,12 +180,12 @@ fun ChatInputBar(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(
-                        when {
-                            isGenerating -> GlassTokens.Accent
-                            canSend -> GlassTokens.Primary
-                            else -> Color(0x22FFFFFF)
-                        }
+                    .then(
+                        if (isGenerating) Modifier.background(GlassTokens.Accent)
+                        else if (canSend) Modifier.background(
+                            Brush.linearGradient(listOf(GlassTokens.Primary, GlassTokens.PrimaryDeep))
+                        )
+                        else Modifier.background(GlassTokens.Divider)
                     )
                     .clickable(enabled = canSend || isGenerating) {
                         if (isGenerating) onStop() else onSend()

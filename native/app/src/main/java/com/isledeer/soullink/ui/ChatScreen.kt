@@ -179,9 +179,25 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(messages.size, messages.lastOrNull()?.text?.length) {
-        if (messages.isNotEmpty() && listState.layoutInfo.totalItemsCount > 0) {
+    val atBottom by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
+            lastVisible.index >= info.totalItemsCount - 1
+        }
+    }
+
+    // 新消息出现：动画跟随到底
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty() && atBottom) {
             listState.animateScrollToItem(messages.lastIndex)
+        }
+    }
+
+    // 流式中：每 ~64 字符轻量跟随（避免逐 token 动画造成抖动/卡顿）
+    LaunchedEffect(messages.lastOrNull()?.text?.length?.div(64)) {
+        if (isGenerating && messages.isNotEmpty() && atBottom) {
+            listState.scrollToItem(messages.lastIndex)
         }
     }
 
@@ -227,16 +243,13 @@ fun ChatScreen(
             }
         },
     ) {
-        Column(
+        AuroraBackground(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                    )
-                )
                 .statusBarsPadding()
                 .imePadding()
+        ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
                 ChatTopBar(
                     title = current?.title ?: "SoulLink",
@@ -263,8 +276,13 @@ fun ChatScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 ) {
-                    items(messages, key = { it.id }) { message ->
+                    items(
+                        items = messages,
+                        key = { it.id },
+                        contentType = { it.role },
+                    ) { message ->
                         MessageBubble(
+                            modifier = Modifier.animateItem(),
                             message = message,
                             onCopy = {
                                 clipboard.setText(AnnotatedString(message.text))
@@ -365,6 +383,7 @@ fun ChatScreen(
                     },
                     onStop = onStop,
                 )
+        }
         }
     }
     if (attachVisible) {
@@ -520,12 +539,7 @@ fun ChatScreen(
 
 @Composable
 private fun PendingImagePreview(base64: String, onClear: () -> Unit) {
-    val bitmap = remember(base64) {
-        runCatching {
-            val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
-            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        }.getOrNull()
-    }
+    val bitmap = rememberThumbnail(base64)
     if (bitmap != null) {
         Row(
             modifier = Modifier
@@ -566,7 +580,7 @@ private fun EditMessageDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.96f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.96f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("编辑消息", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -578,8 +592,8 @@ private fun EditMessageDialog(
                 maxLines = 8,
                 shape = RoundedCornerShape(14.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,
@@ -663,7 +677,7 @@ private fun SearchDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("在会话中搜索", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -675,8 +689,8 @@ private fun SearchDialog(
                 shape = RoundedCornerShape(14.dp),
                 placeholder = { Text("输入关键词", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x14FFFFFF),
-                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedContainerColor = GlassTokens.FieldBgFocused,
+                    unfocusedContainerColor = GlassTokens.FieldBg,
                     focusedTextColor = GlassTokens.TextPrimary,
                     unfocusedTextColor = GlassTokens.TextPrimary,
                     cursorColor = GlassTokens.Primary,
@@ -729,7 +743,7 @@ private fun UsageDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("Token 用量", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -770,7 +784,7 @@ private fun MemoryDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("会话记忆", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -802,7 +816,7 @@ private fun McpDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("会话中的 MCP", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -848,7 +862,7 @@ private fun SkillsDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("会话中的技能", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -892,7 +906,7 @@ private fun TreeDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("消息树", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -937,7 +951,7 @@ private fun RawLogDialog(onDismiss: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("RAW 调试面板", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -985,7 +999,7 @@ private fun ContextDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Text("上下文管理", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -1097,7 +1111,7 @@ private fun GameHudCard(
                             fontSize = 10.sp,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.06f))
+                                .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else GlassTokens.Divider)
                                 .clickable { onSwitch(thread.id) }
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         )
@@ -1109,7 +1123,7 @@ private fun GameHudCard(
                             fontSize = 10.sp,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
+                                .background(GlassTokens.Divider)
                                 .clickable { onStartNpc(npc.id) }
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         )

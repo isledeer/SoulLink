@@ -64,6 +64,7 @@ import com.isledeer.soullink.net.RequestLog
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.components.ModelPickerSheet
 import com.isledeer.soullink.ui.liquidGlass
+import com.isledeer.soullink.ui.components.AuroraBackground
 
 /* ----------------------------- 通用外壳 ----------------------------- */
 
@@ -73,15 +74,9 @@ internal fun PageShell(
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
@@ -145,8 +140,8 @@ internal fun SettingRow(
 
 private val GLASS_FIELD_COLORS
     @Composable get() = TextFieldDefaults.colors(
-        focusedContainerColor = Color(0x14FFFFFF),
-        unfocusedContainerColor = Color(0x0DFFFFFF),
+        focusedContainerColor = GlassTokens.FieldBgFocused,
+        unfocusedContainerColor = GlassTokens.FieldBg,
         focusedTextColor = GlassTokens.TextPrimary,
         unfocusedTextColor = GlassTokens.TextPrimary,
         cursorColor = GlassTokens.Primary,
@@ -255,7 +250,7 @@ fun FeatureBindingsScreen(
     var pickerFeature by remember { mutableStateOf<Feature?>(null) }
     PageShell("默认模型和提示词", onBack) {
         SectionLabel("全局默认提示词")
-        var prompt by remember(settings.defaultPrompt) { mutableStateOf(settings.defaultPrompt) }
+        var prompt by remember { mutableStateOf(settings.defaultPrompt) }
         OutlinedTextField(
             value = prompt,
             onValueChange = {

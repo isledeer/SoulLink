@@ -38,6 +38,7 @@ import com.isledeer.soullink.ui.components.EmphasizedText
 import com.isledeer.soullink.ui.components.FormItem
 import com.isledeer.soullink.ui.components.UIAvatar
 import com.isledeer.soullink.ui.liquidGlass
+import com.isledeer.soullink.ui.components.AuroraBackground
 import org.json.JSONObject
 
 private val PROMPT_VARIABLES = listOf("{{date}}", "{{time}}", "{{datetime}}", "{{device_info}}", "{{model}}")
@@ -60,15 +61,9 @@ fun AssistantDetailScreen(
     var bodyText by remember(assistant.id) { mutableStateOf(mapToLines(assistant.bodyMap())) }
     var modelPickerVisible by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(GlassTokens.BackgroundTop, GlassTokens.BackgroundBottom)
-                )
-            )
-    ) {
+    AuroraBackground(
+        modifier = Modifier.fillMaxSize()
+        ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
@@ -195,8 +190,8 @@ fun AssistantDetailScreen(
                                 )
                             },
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color(0x14FFFFFF),
-                                unfocusedContainerColor = Color(0x0DFFFFFF),
+                                focusedContainerColor = GlassTokens.FieldBgFocused,
+                                unfocusedContainerColor = GlassTokens.FieldBg,
                                 focusedTextColor = GlassTokens.TextPrimary,
                                 unfocusedTextColor = GlassTokens.TextPrimary,
                                 cursorColor = GlassTokens.Primary,
@@ -437,8 +432,8 @@ private fun SliderRow(
 
 @Composable
 private fun glassFieldColors() = TextFieldDefaults.colors(
-    focusedContainerColor = Color(0x14FFFFFF),
-    unfocusedContainerColor = Color(0x0DFFFFFF),
+    focusedContainerColor = GlassTokens.FieldBgFocused,
+    unfocusedContainerColor = GlassTokens.FieldBg,
     focusedTextColor = GlassTokens.TextPrimary,
     unfocusedTextColor = GlassTokens.TextPrimary,
     cursorColor = GlassTokens.Primary,
