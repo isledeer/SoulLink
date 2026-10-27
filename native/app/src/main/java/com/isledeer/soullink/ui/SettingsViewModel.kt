@@ -66,6 +66,8 @@ class SettingsViewModel(
             enabled = true,
         )
         _state.value = _state.value.copy(providers = _state.value.providers + provider)
+        // 立即落盘：详情页是另一个 VM 实例，从 DataStore 读，不写这里就找不到
+        viewModelScope.launch { repository.save(_state.value) }
         return provider.id
     }
 
