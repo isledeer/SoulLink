@@ -204,7 +204,7 @@ fun CodeBlockView(code: String) {
             )
         }
         Text(
-            text = code,
+            text = highlightCode(code),
             color = Color(0xFFE2E8F0),
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
@@ -213,6 +213,63 @@ fun CodeBlockView(code: String) {
                 .padding(top = 6.dp)
                 .horizontalScroll(rememberScrollState()),
         )
+    }
+}
+
+/**
+ * 轻量代码高亮（零依赖）：
+ * 注释 / 字符串 / 数字 / 常见关键词四类着色，覆盖 Kotlin/Java/Python/JS/TS/JSON 常见场景。
+ */
+private val CODE_KEYWORD = Regex(
+    "\\b(fun|val|var|class|object|interface|data|sealed|enum|if|else|when|for|while|return|import|package|" +
+        "private|public|internal|protected|suspend|override|companion|const|true|false|null|this|super|is|in|out|" +
+        "def|lambda|print|function|let|const|async|await|awaitable|export|from|extends|implements|new|try|catch|finally|" +
+        "throw|throws|switch|case|break|continue|struct|type|fn|pub|use|mod|impl|let|mut|where|do|elseif|elif|not|and|or)\\b"
+)
+
+private fun highlightCode(code: String): AnnotatedString = buildAnnotatedString {
+    val lines = code.split("\n")
+    lines.forEachIndexed { index, line ->
+        var i = 0
+        while (i < line.length) {
+            when {
+                line.startsWith("\"", i) || line.startsWith("'", i) -> {
+                    val quote = line[i]
+                    val end = line.indexOf(quote, i + 1)
+                    val stop = if (end > i) end + 1 else line.length
+                    withStyle(SpanStyle(color = Color(0xFFA5D6A7))) { append(line.substring(i, stop)) }
+                    i = stop
+                }
+
+                line.startsWith("//", i) || line.startsWith("#", i) -> {
+                    withStyle(SpanStyle(color = Color(0xFF6B7280), fontStyle = FontStyle.Italic)) {
+                        append(line.substring(i))
+                    }
+                    i = line.length
+                }
+
+                line[i].isDigit() -> {
+                    var j = i
+                    while (j < line.length && (line[j].isDigit() || line[j] == '.')) j++
+                    withStyle(SpanStyle(color = Color(0xFFF2B577))) { append(line.substring(i, j)) }
+                    i = j
+                }
+
+                else -> {
+                    val match = CODE_KEYWORD.find(line, i)
+                    if (match != null && match.range.first == i) {
+                        withStyle(SpanStyle(color = Color(0xFF7DD3FC), fontWeight = FontWeight.Medium)) {
+                            append(match.value)
+                        }
+                        i = match.range.last + 1
+                    } else {
+                        append(line[i])
+                        i++
+                    }
+                }
+            }
+        }
+        if (index < lines.size - 1) append('\n')
     }
 }
 

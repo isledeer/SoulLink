@@ -452,6 +452,18 @@ class ChatViewModel(
         viewModelScope.launch { assistantDao.upsert(updated) }
     }
 
+    /** 切换当前助手启用的 MCP 服务器并落库 */
+    fun toggleMcpServer(id: String) {
+        val assistant = _currentAssistant.value ?: return
+        val list = assistant.mcpList().toMutableList()
+        if (list.contains(id)) list.remove(id) else list.add(id)
+        val array = org.json.JSONArray()
+        list.forEach { array.put(it) }
+        val updated = assistant.copy(mcpServers = array.toString(), updatedAt = System.currentTimeMillis())
+        _currentAssistant.value = updated
+        viewModelScope.launch { assistantDao.upsert(updated) }
+    }
+
     /** 顶栏模型选择：写入当前助手的 chatModelId */
     fun setAssistantModel(model: String) {
         val assistant = _currentAssistant.value ?: return

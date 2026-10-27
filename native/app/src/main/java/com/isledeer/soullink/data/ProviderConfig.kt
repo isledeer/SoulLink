@@ -38,6 +38,41 @@ data class FeatureBinding(
     val model: String,
 )
 
+/** MCP 服务器配置（HTTP 端点；JSON 存于 AppSettings.mcpServersJson） */
+data class McpServerConfig(
+    val id: String,
+    val name: String,
+    val url: String,
+    val apiKey: String = "",
+)
+
+fun parseMcpServers(raw: String?): List<McpServerConfig> = runCatching {
+    val array = JSONArray(raw ?: "[]")
+    (0 until array.length()).mapNotNull { i ->
+        val obj = array.optJSONObject(i) ?: return@mapNotNull null
+        McpServerConfig(
+            id = obj.optString("id").ifBlank { java.util.UUID.randomUUID().toString() },
+            name = obj.optString("name"),
+            url = obj.optString("url"),
+            apiKey = obj.optString("apiKey"),
+        )
+    }
+}.getOrElse { emptyList() }
+
+fun mcpServersToJson(servers: List<McpServerConfig>): String {
+    val array = JSONArray()
+    servers.forEach { server ->
+        array.put(
+            JSONObject()
+                .put("id", server.id)
+                .put("name", server.name)
+                .put("url", server.url)
+                .put("apiKey", server.apiKey)
+        )
+    }
+    return array.toString()
+}
+
 /**
  * 全局设置。`default*` 是整条配置链的最后一层兜底：
  *   全局默认 < 助手配置 < 对话覆盖
@@ -53,6 +88,8 @@ data class AppSettings(
     val searchKeys: Map<String, String> = emptyMap(),
     /** 颜色模式：system / dark / light（设置页持久化，启动时应用） */
     val colorMode: String = "dark",
+    /** 全局默认系统提示词（功能绑定的「默认提示词」） */
+    val defaultPrompt: String = "",
     /** 语音合成语速 / 音调 */
     val ttsRate: Float = 1.0f,
     val ttsPitch: Float = 1.0f,
@@ -158,6 +195,7 @@ data class AppSettings(
                         obj.keys().asSequence().associateWith { key -> obj.optString(key) }
                     } ?: emptyMap(),
                     colorMode = root.optString("colorMode", "dark"),
+                    defaultPrompt = root.optString("defaultPrompt", ""),
                     ttsRate = root.optDouble("ttsRate", 1.0).toFloat(),
                     ttsPitch = root.optDouble("ttsPitch", 1.0).toFloat(),
                     mcpServersJson = root.optString("mcpServersJson", "[]"),

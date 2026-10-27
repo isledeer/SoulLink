@@ -70,18 +70,27 @@ import com.isledeer.soullink.ui.liquidGlass
  */
 @Composable
 fun SettingsOverviewScreen(
+    colorMode: String,
+    onSetColorMode: (String) -> Unit,
     onBack: () -> Unit,
     onOpenAssistants: () -> Unit,
     onOpenProviders: () -> Unit,
     onOpenSearchService: () -> Unit,
+    onOpenPreferences: () -> Unit,
+    onOpenExtensions: () -> Unit,
+    onOpenFeatures: () -> Unit,
+    onOpenVoice: () -> Unit,
+    onOpenMedia: () -> Unit,
+    onOpenMcp: () -> Unit,
+    onOpenWebServer: () -> Unit,
+    onOpenBackup: () -> Unit,
+    onOpenStorage: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenLogs: () -> Unit,
+    onOpenSponsor: () -> Unit,
+    onOpenShare: () -> Unit,
 ) {
-    val context = LocalContext.current
-    fun toast(text: String) {
-        android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-    }
-
-    var colorMode by remember { mutableStateOf("跟随系统") }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -117,30 +126,30 @@ fun SettingsOverviewScreen(
                     .padding(top = 12.dp)
             ) {
                 SectionLabel("通用设置")
-                ColorModeRow(selected = colorMode, onSelect = { colorMode = it })
-                OverviewRow(Icons.Outlined.Tune, "偏好设置", "主题、通知、界面和常规设置") { toast("开发中") }
+                ColorModeRow(selected = colorMode, onSelect = onSetColorMode)
+                OverviewRow(Icons.Outlined.Tune, "偏好设置", "主题、通知、界面和常规设置", onOpenPreferences)
                 OverviewRow(Icons.Outlined.SmartToy, "助手管理", "设置个性化助手（智能体）", onOpenAssistants)
-                OverviewRow(Icons.Outlined.Extension, "扩展管理", "管理提示词注入、技能等扩展") { toast("开发中") }
+                OverviewRow(Icons.Outlined.Extension, "扩展管理", "管理提示词注入、技能等扩展", onOpenExtensions)
 
                 SectionLabel("模型与服务")
-                OverviewRow(Icons.Outlined.Settings, "默认模型和提示词", "设置各个功能的默认模型") { toast("开发中") }
+                OverviewRow(Icons.Outlined.Settings, "默认模型和提示词", "设置各个功能的默认模型", onOpenFeatures)
                 OverviewRow(Icons.Outlined.Dns, "提供商", "配置 AI 提供商", onOpenProviders)
                 OverviewRow(Icons.Outlined.Search, "搜索服务", "设置搜索服务", onOpenSearchService)
-                OverviewRow(Icons.Outlined.RecordVoiceOver, "语音服务", "配置语音合成与语音识别服务提供商") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Image, "媒体", "图像与视频生成提供商、素材上传") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Hub, "MCP", "配置 MCP 服务器") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Devices, "Web 服务器", "允许你通过网页访问 SoulLink") { toast("开发中") }
+                OverviewRow(Icons.Outlined.RecordVoiceOver, "语音服务", "配置语音合成与语音识别服务提供商", onOpenVoice)
+                OverviewRow(Icons.Outlined.Image, "媒体", "图像与视频生成提供商、素材上传", onOpenMedia)
+                OverviewRow(Icons.Outlined.Hub, "MCP", "配置 MCP 服务器", onOpenMcp)
+                OverviewRow(Icons.Outlined.Devices, "Web 服务器", "允许你通过网页访问 SoulLink", onOpenWebServer)
 
                 SectionLabel("数据设置")
-                OverviewRow(Icons.Outlined.SaveAlt, "数据备份", "备份和恢复应用数据") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Storage, "存储管理", "查看并清理本地文件") { toast("开发中") }
+                OverviewRow(Icons.Outlined.SaveAlt, "数据备份", "备份和恢复应用数据", onOpenBackup)
+                OverviewRow(Icons.Outlined.Storage, "存储管理", "查看并清理本地文件", onOpenStorage)
 
                 SectionLabel("关于")
-                OverviewRow(Icons.Outlined.Info, "关于", "关于本 APP") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Description, "使用文档", "查看应用使用说明和帮助文档") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Key, "请求日志", "查看 HTTP 请求日志") { toast("开发中") }
-                OverviewRow(Icons.Outlined.FavoriteBorder, "赞助", "如果你喜欢这个应用，请赞助作者的工作") { toast("开发中") }
-                OverviewRow(Icons.Outlined.Share, "分享", "分享本 APP 给朋友") { toast("开发中") }
+                OverviewRow(Icons.Outlined.Info, "关于", "关于本 APP", onOpenAbout)
+                OverviewRow(Icons.Outlined.Description, "使用文档", "查看应用使用说明和帮助文档", onOpenHelp)
+                OverviewRow(Icons.Outlined.Key, "请求日志", "查看 HTTP 请求日志", onOpenLogs)
+                OverviewRow(Icons.Outlined.FavoriteBorder, "赞助", "如果你喜欢这个应用，请赞助作者的工作", onOpenSponsor)
+                OverviewRow(Icons.Outlined.Share, "分享", "分享本 APP 给朋友", onOpenShare)
 
                 Spacer(Modifier.height(24.dp))
             }

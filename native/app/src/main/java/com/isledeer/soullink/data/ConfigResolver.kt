@@ -53,9 +53,9 @@ object ConfigResolver {
             else -> settings.defaultMaxTokens
         }
 
-        // System Prompt：对话覆盖 > 助手 > 全局空
+        // System Prompt：对话覆盖 > 助手 > 全局默认
         val rawPrompt = conversation?.systemPrompt?.takeIf { it.isNotBlank() }
-            ?: assistant?.systemPrompt.orEmpty()
+            ?: assistant?.systemPrompt.orEmpty().ifBlank { settings.defaultPrompt }
 
         return ResolvedConfig(
             provider = provider,

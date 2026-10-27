@@ -5,3 +5,4 @@ dist/
 .env.local
 *.bak
 cordis.patch.yml
+.last_pushed

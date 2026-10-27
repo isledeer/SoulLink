@@ -125,4 +125,16 @@ object AppTheme {
         GlassTokens.BubbleAi = Color(palette[7])
         GlassTokens.BubbleUser = Color(palette[8])
     }
+
+    /** system 模式按系统深浅色解析成 dark / light */
+    fun resolve(mode: String, context: android.content.Context): String = when (mode) {
+        "light" -> "light"
+        "system" -> {
+            val night = (context.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            if (night) "dark" else "light"
+        }
+        else -> "dark"
+    }
 }

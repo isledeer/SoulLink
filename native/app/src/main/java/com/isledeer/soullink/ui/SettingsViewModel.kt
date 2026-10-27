@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.isledeer.soullink.data.AppSettings
 import com.isledeer.soullink.data.Feature
 import com.isledeer.soullink.data.FeatureBinding
+import com.isledeer.soullink.data.McpServerConfig
 import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.data.SettingsRepository
+import com.isledeer.soullink.data.mcpServersToJson
+import com.isledeer.soullink.data.parseMcpServers
 import com.isledeer.soullink.net.SseClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -105,6 +108,27 @@ class SettingsViewModel(
     /** TTS 语速 / 音调 */
     fun setTts(rate: Float, pitch: Float) {
         _state.value = _state.value.copy(ttsRate = rate, ttsPitch = pitch)
+    }
+
+    /** 全局默认提示词 */
+    fun setDefaultPrompt(text: String) {
+        _state.value = _state.value.copy(defaultPrompt = text)
+    }
+
+    fun addMcpServer(server: McpServerConfig) {
+        val list = parseMcpServers(_state.value.mcpServersJson).toMutableList()
+        list.add(server)
+        _state.value = _state.value.copy(mcpServersJson = mcpServersToJson(list))
+    }
+
+    fun updateMcpServer(server: McpServerConfig) {
+        val list = parseMcpServers(_state.value.mcpServersJson).map { if (it.id == server.id) server else it }
+        _state.value = _state.value.copy(mcpServersJson = mcpServersToJson(list))
+    }
+
+    fun removeMcpServer(id: String) {
+        val list = parseMcpServers(_state.value.mcpServersJson).filterNot { it.id == id }
+        _state.value = _state.value.copy(mcpServersJson = mcpServersToJson(list))
     }
 
     fun save() {

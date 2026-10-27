@@ -64,6 +64,14 @@ fun ChatTopBar(
     onClearContext: () -> Unit,
     onOpenSettings: () -> Unit,
     onToggleAutoCompress: () -> Unit,
+    onSearch: () -> Unit,
+    onShareExport: () -> Unit,
+    onUsage: () -> Unit,
+    onMemory: () -> Unit,
+    onSkills: () -> Unit,
+    onMcp: () -> Unit,
+    onTree: () -> Unit,
+    onRawDebug: () -> Unit,
 ) {
     var moreExpanded by remember { mutableStateOf(false) }
     Row(
@@ -118,6 +126,14 @@ fun ChatTopBar(
                 onClearContext = onClearContext,
                 onOpenSettings = onOpenSettings,
                 onToggleAutoCompress = onToggleAutoCompress,
+                onSearch = onSearch,
+                onShareExport = onShareExport,
+                onUsage = onUsage,
+                onMemory = onMemory,
+                onSkills = onSkills,
+                onMcp = onMcp,
+                onTree = onTree,
+                onRawDebug = onRawDebug,
             )
         }
     }

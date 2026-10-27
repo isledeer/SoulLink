@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.isledeer.soullink.data.Feature
+import com.isledeer.soullink.data.parseMcpServers
 import org.koin.androidx.compose.koinViewModel
 
 /** 聊天页接线：ViewModel → ChatScreen（零业务逻辑） */
@@ -28,6 +29,7 @@ fun ChatRoute(
     val isSearchEnabled by viewModel.isSearchEnabled.collectAsStateWithLifecycle()
     val thinkingLevel by viewModel.thinkingLevel.collectAsStateWithLifecycle()
     val currentModelName by viewModel.currentModelName.collectAsStateWithLifecycle()
+    val memorySummary by viewModel.memorySummary.collectAsStateWithLifecycle()
 
     ChatScreen(
         conversations = conversations,
@@ -73,5 +75,11 @@ fun ChatRoute(
         onUpdateConversation = { prompt, tokens, temp ->
             viewModel.updateCurrentConversation(prompt, tokens, temp)
         },
+        quickPrompts = currentAssistant?.promptList().orEmpty(),
+        memorySummary = memorySummary,
+        mcpServers = parseMcpServers(settings.mcpServersJson).map { it.id to it.name },
+        enabledMcp = currentAssistant?.mcpList()?.toSet().orEmpty(),
+        onToggleMcp = viewModel::toggleMcpServer,
+        onCompact = { viewModel.compactNow() },
     )
 }

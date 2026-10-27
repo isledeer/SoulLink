@@ -33,15 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val MENU_TEXT = Color(0xFFE5E7EB)
 
 /**
- * 顶栏 ⋮ 下拉菜单（15 项，严格按任务卡顺序与分组）。
- * 外层已由 ChatTopBar 的 Box 包裹，触发点不会乱飞。
+ * 顶栏 ⋮ 下拉菜单（15 项全部接线，事件由 ChatScreen 绑定）。
  */
 @Composable
 fun TopBarDropdownMenu(
@@ -53,12 +51,15 @@ fun TopBarDropdownMenu(
     onClearContext: () -> Unit,
     onOpenSettings: () -> Unit,
     onToggleAutoCompress: () -> Unit,
+    onSearch: () -> Unit,
+    onShareExport: () -> Unit,
+    onUsage: () -> Unit,
+    onMemory: () -> Unit,
+    onSkills: () -> Unit,
+    onMcp: () -> Unit,
+    onTree: () -> Unit,
+    onRawDebug: () -> Unit,
 ) {
-    val context = LocalContext.current
-    fun toast(text: String) {
-        android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-    }
-
     val shape = RoundedCornerShape(16.dp)
 
     DropdownMenu(
@@ -69,8 +70,8 @@ fun TopBarDropdownMenu(
             .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)), shape),
     ) {
         MenuRow(Icons.Outlined.Edit, "新建对话") { onNewChat(); onDismiss() }
-        MenuRow(Icons.Outlined.Search, "在会话中搜索") { toast("开发中"); onDismiss() }
-        MenuRow(Icons.Outlined.Share, "分享/导出") { toast("开发中"); onDismiss() }
+        MenuRow(Icons.Outlined.Search, "在会话中搜索") { onSearch(); onDismiss() }
+        MenuRow(Icons.Outlined.Share, "分享/导出") { onShareExport(); onDismiss() }
         MenuRow(Icons.Outlined.Delete, "清空对话", danger = true) { onClearContext(); onDismiss() }
 
         MenuDivider()
@@ -80,7 +81,7 @@ fun TopBarDropdownMenu(
             icon = Icons.Outlined.Info,
             label = "Token 用量",
             trailing = { Text("${tokenUsage}", color = MENU_TEXT.copy(alpha = 0.65f), fontSize = 11.sp) },
-            onClick = { },
+            onClick = { onUsage(); onDismiss() },
         )
         MenuRow(
             icon = Icons.Outlined.Compress,
@@ -97,14 +98,14 @@ fun TopBarDropdownMenu(
 
         MenuDivider()
 
-        MenuRow(Icons.Outlined.Psychology, "会话中的记忆") { toast("开发中"); onDismiss() }
-        MenuRow(Icons.Outlined.Extension, "会话中的技能") { toast("开发中"); onDismiss() }
-        MenuRow(Icons.Outlined.Hub, "会话中的 MCP") { toast("开发中"); onDismiss() }
+        MenuRow(Icons.Outlined.Psychology, "会话中的记忆") { onMemory(); onDismiss() }
+        MenuRow(Icons.Outlined.Extension, "会话中的技能") { onSkills(); onDismiss() }
+        MenuRow(Icons.Outlined.Hub, "会话中的 MCP") { onMcp(); onDismiss() }
 
         MenuDivider()
 
-        MenuRow(Icons.Outlined.AccountTree, "查看消息树") { toast("开发中"); onDismiss() }
-        MenuRow(Icons.Outlined.DataObject, "RAW 调试面板") { toast("开发中"); onDismiss() }
+        MenuRow(Icons.Outlined.AccountTree, "查看消息树") { onTree(); onDismiss() }
+        MenuRow(Icons.Outlined.DataObject, "RAW 调试面板") { onRawDebug(); onDismiss() }
     }
 }
 

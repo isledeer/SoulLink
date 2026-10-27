@@ -68,12 +68,14 @@ fun AttachBottomSheet(
     onDismiss: () -> Unit,
     onPickPhoto: () -> Unit,
     onFillInput: (String) -> Unit,
+    onCamera: () -> Unit,
+    onWorldBook: () -> Unit,
+    onPrompt: () -> Unit,
+    onContext: () -> Unit,
+    onSkills: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    fun toast(text: String) {
-        android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-    }
 
     val pickFile = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -103,17 +105,17 @@ fun AttachBottomSheet(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AttachIcon(Icons.Outlined.PhotoCamera, "拍照") { toast("开发中") }
+                AttachIcon(Icons.Outlined.PhotoCamera, "拍照") { onCamera() }
                 AttachIcon(Icons.Outlined.Image, "照片") { onPickPhoto() }
                 AttachIcon(Icons.Outlined.AttachFile, "上传文件") {
                     pickFile.launch("*/*")
                 }
             }
 
-            SheetListRow(Icons.Outlined.Extension, "技能") { toast("开发中") }
-            SheetListRow(Icons.Outlined.MoveToInbox, "指令注入") { toast("开发中") }
-            SheetListRow(Icons.Outlined.MenuBook, "世界书") { toast("开发中") }
-            SheetListRow(Icons.Outlined.AccountTree, "上下文管理") { toast("开发中") }
+            SheetListRow(Icons.Outlined.Extension, "技能") { onSkills() }
+            SheetListRow(Icons.Outlined.MoveToInbox, "指令注入") { onPrompt() }
+            SheetListRow(Icons.Outlined.MenuBook, "世界书") { onWorldBook() }
+            SheetListRow(Icons.Outlined.AccountTree, "上下文管理") { onContext() }
 
             Spacer(Modifier.height(24.dp))
         }
@@ -164,13 +166,11 @@ private fun SheetListRow(
 fun ToolsBottomSheet(
     toolStates: Map<String, Boolean>,
     onToggleTool: (String) -> Unit,
+    mcpServers: List<Pair<String, String>>,
+    enabledMcp: Set<String>,
+    onToggleMcp: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
-    fun toast(text: String) {
-        android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-    }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -189,22 +189,32 @@ fun ToolsBottomSheet(
 
             Spacer(Modifier.height(8.dp))
             SheetSectionTitle("MCP服务器")
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.Hub, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(10.dp))
-                Text("@SoulLink/mcp", color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Switch(checked = false, onCheckedChange = null, enabled = false)
+            if (mcpServers.isEmpty()) {
+                Text(
+                    text = "还没有配置 MCP 服务器（设置 → MCP）",
+                    color = GlassTokens.TextSecondary.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            } else {
+                mcpServers.forEach { (id, name) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Hub, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(name, color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = id in enabledMcp,
+                            onCheckedChange = { onToggleMcp(id) },
+                        )
+                    }
+                }
             }
-
-            Spacer(Modifier.height(8.dp))
-            SheetSectionTitle("工作区")
-            SheetListRow(Icons.Outlined.CreateNewFolder, "绑定工作区") { toast("开发中") }
 
             Spacer(Modifier.height(24.dp))
         }

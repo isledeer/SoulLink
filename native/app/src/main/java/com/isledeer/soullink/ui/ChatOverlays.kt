@@ -129,8 +129,9 @@ fun DrawerContent(
                     .clip(RoundedCornerShape(12.dp))
                     .clickable {
                         when (entry.label) {
-                            "助手" -> onOpenAssistants()
-                            "故事书" -> onOpenWorldBook()
+                            "助手", "角色" -> onOpenAssistants()
+                            "故事书", "沉入世界" -> onOpenWorldBook()
+                            "MCP" -> onOpenSettings()
                         }
                     }
                     .padding(horizontal = 10.dp, vertical = 9.dp),
