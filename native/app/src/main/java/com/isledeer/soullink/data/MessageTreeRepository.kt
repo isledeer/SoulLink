@@ -14,13 +14,18 @@ data class ResolvedTurn(
 /** parts 编解码（text / image） */
 object MessageParts {
 
-    fun encode(text: String, imageBase64: String?): String {
+    fun encode(text: String, imageBase64: String?, choices: List<String> = emptyList()): String {
         val array = JSONArray()
         if (text.isNotBlank()) {
             array.put(JSONObject().put("type", "text").put("text", text))
         }
         if (!imageBase64.isNullOrBlank()) {
             array.put(JSONObject().put("type", "image").put("base64", imageBase64))
+        }
+        if (choices.isNotEmpty()) {
+            val items = JSONArray()
+            choices.forEach { items.put(it) }
+            array.put(JSONObject().put("type", "choices").put("items", items))
         }
         return array.toString()
     }

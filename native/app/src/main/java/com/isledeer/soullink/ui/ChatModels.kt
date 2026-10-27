@@ -29,6 +29,8 @@ data class ChatMessage(
     /** 同一节点下的变体总数与当前下标（>1 时 UI 显示 [< 1/N >]） */
     val variantCount: Int = 1,
     val variantIndex: Int = 0,
+    /** 模式 B 的 ABCD 选项（来自消息 parts 的 choices） */
+    val choices: List<String> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
 )
 
@@ -36,6 +38,8 @@ data class Conversation(
     val id: String,
     val title: String,
     val assistantId: String,
+    /** 绑定的游戏存档 id（null = 普通聊天） */
+    val sessionId: String? = null,
     val systemPrompt: String = "",
     val maxTokens: Int = 0,
     val temperature: Double = -1.0,

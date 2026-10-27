@@ -74,6 +74,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // ---------- 单元测试（纯 JVM，账本核心） ----------
+    testImplementation("junit:junit:4.13.2")
+    // Android 单测里的 org.json 是空壳（方法全抛异常），这里给真实实现
+    testImplementation("org.json:json:20231013")
+
     // ------------------------------------------------------------------
     // 液态玻璃：两条路都要升工具链，暂不启用（详见 ui/Glass.kt 注释）
     //

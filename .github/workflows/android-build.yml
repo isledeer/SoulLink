@@ -49,6 +49,10 @@ jobs:
       # 注意用 sh：仓库里 gradlew 的 exec 位在 Android 存储上不生效，可能被提交成 644
       run: sh gradlew assembleDebug --no-daemon --stacktrace
 
+    - name: Run unit tests (ledger core)
+      working-directory: ./native
+      run: sh gradlew testDebugUnitTest --no-daemon --stacktrace
+
     # 防呆：syncDist 会删掉占位页再拷 dist。这里再验一次，
     # 确保 APK 里装的是真内核而不是「内核未同步」的 1878 字节占位页。
     - name: Verify web core packed

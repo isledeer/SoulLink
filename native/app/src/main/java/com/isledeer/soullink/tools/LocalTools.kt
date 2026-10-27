@@ -97,10 +97,87 @@ class LocalTools(private val context: Context) {
         },
     )
 
+    /**
+     * 游戏状态工具（M1 只注册，不开放给普通聊天：catalog 里暂不出现）。
+     * 真正的解析与落账由 ChatViewModel / GameLedgerRepository 完成，
+     * 这里执行器只做占位回执。
+     */
+    private fun gameTool(): LocalTool = LocalTool(
+        id = GAME_TOOL_ID,
+        name = GAME_TOOL_NAME,
+        description = "记录本轮回复造成的游戏状态变化：好感度、物品、场景、旗标、属性、时间与选项。每次回复都应调用；没有变化时传空对象。",
+        parameters = JSONObject()
+            .put("type", "object")
+            .put(
+                "properties",
+                JSONObject()
+                    .put(
+                        "relation",
+                        JSONObject()
+                            .put("type", "object")
+                            .put("description", "好感度变化")
+                            .put(
+                                "properties",
+                                JSONObject()
+                                    .put("target", JSONObject().put("type", "string"))
+                                    .put("delta", JSONObject().put("type", "integer"))
+                                    .put("reason", JSONObject().put("type", "string"))
+                            )
+                    )
+                    .put(
+                        "items_gained",
+                        JSONObject()
+                            .put("type", "array")
+                            .put(
+                                "items",
+                                JSONObject()
+                                    .put("type", "object")
+                                    .put(
+                                        "properties",
+                                        JSONObject()
+                                            .put("id", JSONObject().put("type", "string"))
+                                            .put("name", JSONObject().put("type", "string"))
+                                            .put("qty", JSONObject().put("type", "integer"))
+                                    )
+                            )
+                    )
+                    .put(
+                        "items_lost",
+                        JSONObject()
+                            .put("type", "array")
+                            .put(
+                                "items",
+                                JSONObject()
+                                    .put("type", "object")
+                                    .put(
+                                        "properties",
+                                        JSONObject()
+                                            .put("id", JSONObject().put("type", "string"))
+                                            .put("qty", JSONObject().put("type", "integer"))
+                                    )
+                            )
+                    )
+                    .put("scene", JSONObject().put("type", "string"))
+                    .put("flags", JSONObject().put("type", "object"))
+                    .put("stats", JSONObject().put("type", "object"))
+                    .put("time", JSONObject().put("type", "string"))
+                    .put(
+                        "choices",
+                        JSONObject()
+                            .put("type", "array")
+                            .put("items", JSONObject().put("type", "string"))
+                    )
+            ),
+        executor = { args: JSONObject -> "已记录" },
+    )
+
     private fun weekday(date: Date): String =
         SimpleDateFormat("EEEE", Locale.CHINA).format(date)
 
     companion object {
+        const val GAME_TOOL_ID = "game"
+        const val GAME_TOOL_NAME = "update_game_state"
+
         /** 供 UI 展示的工具元信息（id / 名称 / 描述） */
         val catalog: List<Triple<String, String, String>> = listOf(
             Triple("time", "时间信息", "允许模型查询当前日期与时间"),

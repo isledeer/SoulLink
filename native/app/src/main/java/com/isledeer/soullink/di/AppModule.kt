@@ -1,6 +1,7 @@
 package com.isledeer.soullink.di
 
 import com.isledeer.soullink.data.AppDatabase
+import com.isledeer.soullink.data.GameLedgerRepository
 import com.isledeer.soullink.data.MessageTreeRepository
 import com.isledeer.soullink.data.SettingsRepository
 import com.isledeer.soullink.net.SseClient
@@ -20,7 +21,10 @@ val appModule = module {
     single { get<AppDatabase>().assistantDao() }
     single { get<AppDatabase>().conversationDao() }
     single { get<AppDatabase>().messageTreeDao() }
+    single { get<AppDatabase>().gameSessionDao() }
+    single { get<AppDatabase>().gameEventDao() }
     single { MessageTreeRepository(get()) }
+    single { GameLedgerRepository(get(), get(), get(), get()) }
     single { SettingsRepository(androidContext()) }
 
     // 设备能力 & 工具
@@ -31,7 +35,7 @@ val appModule = module {
     single { SseClient() }
 
     // ViewModel
-    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { AssistantViewModel(get(), get(), get()) }
 }

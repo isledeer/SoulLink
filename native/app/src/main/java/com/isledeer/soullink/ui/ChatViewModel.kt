@@ -10,12 +10,18 @@ import com.isledeer.soullink.data.ConfigResolver
 import com.isledeer.soullink.data.ConversationDao
 import com.isledeer.soullink.data.ConversationEntity
 import com.isledeer.soullink.data.Feature
+import com.isledeer.soullink.data.GameAction
+import com.isledeer.soullink.data.GameActionParser
+import com.isledeer.soullink.data.GameLedgerRepository
+import com.isledeer.soullink.data.GameSessionEntity
+import com.isledeer.soullink.data.GameState
 import com.isledeer.soullink.data.MessageParts
 import com.isledeer.soullink.data.MessageTreeRepository
 import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.data.ResolvedConfig
 import com.isledeer.soullink.data.SettingsRepository
 import com.isledeer.soullink.data.UIMessageEntity
+import com.isledeer.soullink.data.isGameEnabled
 import com.isledeer.soullink.net.ChatRequest
 import com.isledeer.soullink.net.ChatTurn
 import com.isledeer.soullink.net.SseClient
@@ -48,6 +54,7 @@ class ChatViewModel(
     private val assistantDao: AssistantDao,
     private val tree: MessageTreeRepository,
     private val tools: LocalTools,
+    private val ledger: GameLedgerRepository,
     private val speaker: Speaker,
 ) : ViewModel() {
 
@@ -68,6 +75,15 @@ class ChatViewModel(
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
+
+    /** 当前会话的账本投影；null = 普通聊天（无游戏层） */
+    private val _gameState = MutableStateFlow<GameState?>(null)
+    val gameState: StateFlow<GameState?> = _gameState.asStateFlow()
+
+    /** 本轮生成是否处于游戏模式（由会话的 GameSession 决定） */
+    private var gameActive = false
+    private var activeSession: GameSessionEntity? = null
+    private val pendingGameActions = mutableListOf<GameAction>()
 
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
@@ -162,6 +178,7 @@ class ChatViewModel(
             ?: _assistants.value.firstOrNull()
         refreshModelName()
         reloadMessages(list.first().id)
+        refreshGameState(list.first().id)
     }
 
     /* ------------------------------ 会话 ------------------------------ */
@@ -175,6 +192,7 @@ class ChatViewModel(
             _conversations.update { listOf(entity.toUi()) + it }
             _current.value = entity.toUi()
             _messages.value = emptyList()
+            _gameState.value = null
         }
     }
 
@@ -188,6 +206,7 @@ class ChatViewModel(
                 ?: _assistants.value.firstOrNull()
             refreshModelName()
             reloadMessages(id)
+            refreshGameState(id)
         }
     }
 
@@ -195,6 +214,7 @@ class ChatViewModel(
         viewModelScope.launch {
             conversationDao.delete(id)
             tree.clear(id)
+            ledger.deleteForConversation(id)
             val remaining = conversationDao.loadAll()
             if (remaining.isEmpty()) {
                 val fresh = newConversationEntity(_assistants.value.firstOrNull())
@@ -202,11 +222,13 @@ class ChatViewModel(
                 _conversations.value = listOf(fresh.toUi())
                 _current.value = fresh.toUi()
                 _messages.value = emptyList()
+                _gameState.value = null
             } else {
                 _conversations.value = remaining.map { it.toUi() }
                 if (_current.value?.id == id) {
                     _current.value = remaining.first().toUi()
                     reloadMessages(remaining.first().id)
+                    refreshGameState(remaining.first().id)
                 }
             }
         }
@@ -270,9 +292,12 @@ class ChatViewModel(
 
     fun deleteMessage(id: String) {
         val message = _messages.value.firstOrNull { it.id == id } ?: return
+        val conversationId = _current.value?.id
         viewModelScope.launch {
             tree.deleteNode(message.nodeId)
+            ledger.deleteForNode(message.nodeId)
             _messages.update { list -> list.filterNot { it.id == id } }
+            if (conversationId != null) refreshGameState(conversationId)
         }
     }
 
@@ -280,13 +305,26 @@ class ChatViewModel(
         val trimmed = newText.trim()
         if (trimmed.isEmpty()) return
         val message = _messages.value.firstOrNull { it.id == id } ?: return
+        val conversationId = _current.value?.id ?: return
         viewModelScope.launch {
+            var storedText = trimmed
+            var extractedAction: GameAction? = null
+            val session = if (message.role == Role.Assistant) {
+                runCatching { ledger.sessionOf(conversationId) }.getOrNull()
+            } else {
+                null
+            }
+            if (session?.isGameEnabled == true) {
+                val extracted = GameActionParser.extract(trimmed)
+                storedText = extracted.first
+                extractedAction = extracted.second
+            }
             tree.updateMessage(
                 UIMessageEntity(
                     id = message.id,
                     nodeId = message.nodeId,
                     role = message.role.apiName,
-                    parts = MessageParts.encode(trimmed, message.imageBase64),
+                    parts = MessageParts.encode(storedText, message.imageBase64, message.choices),
                     reasoning = message.reasoning,
                     usageTokens = message.tokenCount,
                     generationSpeed = message.generationSpeed,
@@ -295,7 +333,18 @@ class ChatViewModel(
                 )
             )
             _messages.update { list ->
-                list.map { if (it.id == id) it.copy(text = trimmed) else it }
+                list.map { if (it.id == id) it.copy(text = storedText) else it }
+            }
+            if (session != null && session.isGameEnabled) {
+                val state = ledger.replaceActions(
+                    session = session,
+                    conversationId = conversationId,
+                    messageId = message.id,
+                    nodeId = message.nodeId,
+                    actions = listOfNotNull(extractedAction),
+                    source = "BLOCK",
+                )
+                _gameState.value = state
             }
         }
     }
@@ -311,7 +360,7 @@ class ChatViewModel(
                     id = message.id,
                     nodeId = message.nodeId,
                     role = message.role.apiName,
-                    parts = MessageParts.encode(message.text, message.imageBase64),
+                    parts = MessageParts.encode(message.text, message.imageBase64, message.choices),
                     reasoning = message.reasoning,
                     usageTokens = message.tokenCount,
                     generationSpeed = message.generationSpeed,
@@ -346,7 +395,7 @@ class ChatViewModel(
                     conversationId = entity.id,
                     parentId = parent,
                     role = msg.role.apiName,
-                    parts = MessageParts.encode(msg.text, msg.imageBase64),
+                    parts = MessageParts.encode(msg.text, msg.imageBase64, msg.choices),
                     reasoning = msg.reasoning,
                 )
                 parent = nodeId
@@ -363,8 +412,10 @@ class ChatViewModel(
         stop()
         viewModelScope.launch {
             tree.clear(conversation.id)
+            ledger.deleteForConversation(conversation.id)
             _messages.value = emptyList()
             _tokenUsage.value = 0
+            refreshGameState(conversation.id)
         }
     }
 
@@ -445,6 +496,11 @@ class ChatViewModel(
             return
         }
 
+        // 游戏模式判定：会话绑定了游戏存档且已启用
+        activeSession = runCatching { ledger.sessionOf(conversation.id) }.getOrNull()
+        gameActive = activeSession?.isGameEnabled == true
+        pendingGameActions.clear()
+
         // 1) 建占位（新节点 或 给已有节点加变体）
         val nodeId: String
         val messageId: String
@@ -487,6 +543,8 @@ class ChatViewModel(
             var finalText = ""
             var finalReasoning = ""
             var finalImage: String? = null
+            var cancelled = false
+            var failed = false
             try {
                 // 工具环路：模型发 tool_calls -> 本地执行 -> 回填 -> 自动续流（上限 MAX_TOOL_ROUNDS 轮）
                 var turnsInFlight = turns
@@ -546,8 +604,10 @@ class ChatViewModel(
                     round++
                 }
             } catch (e: CancellationException) {
-                // 用户停止：保留已生成
+                // 用户停止：保留已生成，不落账
+                cancelled = true
             } catch (e: Exception) {
+                failed = true
                 val reason = e.message ?: "未知错误"
                 if (finalText.isBlank()) finalText = "请求失败：$reason"
                 patchMessage(messageId) { it.copy(text = finalText, isError = true) }
@@ -556,18 +616,60 @@ class ChatViewModel(
                 val tokens = if (usageTokens > 0) usageTokens else (receivedChars / 2).coerceAtLeast(0)
                 val speed = if (tokens > 0) tokens / elapsed else 0.0
 
+                // 剥 <game> 尾块（游戏模式才做；普通聊天不动正文）
+                var visibleText = finalText
+                var blockAction: GameAction? = null
+                if (gameActive) {
+                    val extracted = GameActionParser.extract(finalText)
+                    visibleText = extracted.first
+                    blockAction = extracted.second
+                }
+
+                val choiceAction = pendingGameActions.lastOrNull { it.choices.isNotEmpty() }
+                    ?: blockAction?.takeIf { it.choices.isNotEmpty() }
+                val choices = choiceAction?.choices.orEmpty()
+
                 tree.updateMessage(
                     UIMessageEntity(
                         id = messageId,
                         nodeId = nodeId,
                         role = Role.Assistant.apiName,
-                        parts = MessageParts.encode(finalText, finalImage),
+                        parts = MessageParts.encode(visibleText, finalImage, choices),
                         reasoning = finalReasoning.ifBlank { null },
                         usageTokens = tokens,
                         generationSpeed = speed,
                         createdAt = System.currentTimeMillis(),
                     )
                 )
+
+                // 账本落事件：取消/报错不写（避免半截状态）；工具通道优先于 <game> 块
+                if (gameActive && !cancelled && !failed) {
+                    val session = activeSession
+                    if (session != null) {
+                        try {
+                            val actions = mutableListOf<GameAction>()
+                            actions.addAll(pendingGameActions)
+                            if (actions.isEmpty()) {
+                                blockAction?.let { action ->
+                                    if (!action.isEmpty) actions.add(action)
+                                }
+                            }
+                            val source = if (pendingGameActions.isNotEmpty()) "TOOL" else "BLOCK"
+                            val state = ledger.replaceActions(
+                                session = session,
+                                conversationId = conversation.id,
+                                messageId = messageId,
+                                nodeId = nodeId,
+                                actions = actions,
+                                source = source,
+                            )
+                            _gameState.value = state
+                        } catch (e: Exception) {
+                            // 账本写入失败不影响消息本身
+                        }
+                    }
+                }
+                pendingGameActions.clear()
 
                 streamingId = null
                 _isGenerating.value = false
@@ -600,7 +702,7 @@ class ChatViewModel(
         } else {
             usable
         }
-        return limited.map { msg ->
+        val turns = limited.map { msg ->
             ChatTurn(
                 role = msg.role.apiName,
                 content = ConfigResolver.applyTemplate(
@@ -611,6 +713,15 @@ class ChatViewModel(
                 imageBase64 = msg.imageBase64,
             )
         }
+        // 游戏模式且没启用 game 工具：块通道指令贴最后一条 user 消息（旧引擎教训）
+        if (!gameActive) return turns
+        if (config.tools.any { it.name == GAME_TOOL_NAME }) return turns
+        val lastUser = turns.indexOfLast { it.role == "user" }
+        if (lastUser < 0) return turns
+        val updated = turns.toMutableList()
+        val target = updated[lastUser]
+        updated[lastUser] = target.copy(content = target.content + "\n\n" + GAME_BLOCK_SUFFIX)
+        return updated
     }
 
     private fun toolSchemas(enabled: List<LocalTool>): List<JSONObject> = enabled.map { tool ->
@@ -646,10 +757,21 @@ class ChatViewModel(
                 tokenCount = turn.message.usageTokens,
                 variantCount = turn.variantCount,
                 variantIndex = turn.variantIndex,
+                choices = MessageParts.choices(turn.message.parts),
                 createdAt = turn.message.createdAt,
             )
         }
         _tokenUsage.value = _messages.value.sumOf { it.tokenCount }
+    }
+
+    /** 重新推导当前会话的账本状态；普通聊天置 null。 */
+    private suspend fun refreshGameState(conversationId: String) {
+        val session = runCatching { ledger.sessionOf(conversationId) }.getOrNull()
+        _gameState.value = if (session?.isGameEnabled == true) {
+            runCatching { ledger.derive(session.id) }.getOrNull()
+        } else {
+            null
+        }
     }
 
     private fun newConversationEntity(assistant: AssistantEntity?): ConversationEntity {
@@ -671,6 +793,18 @@ class ChatViewModel(
         messageId: String,
         call: SseEvent.ToolCall,
     ): ToolTurnResult {
+        // 游戏状态工具不走通用执行器：参数暂存，消息定稿时统一落账
+        if (call.name == GAME_TOOL_NAME) {
+            if (!gameActive) {
+                return ToolTurnResult(call.id, "游戏状态未启用", null)
+            }
+            val action = runCatching { GameAction.fromJson(JSONObject(call.arguments)) }.getOrNull()
+            if (action == null) {
+                return ToolTurnResult(call.id, "参数无法解析", null)
+            }
+            if (!action.isEmpty) pendingGameActions.add(action)
+            return ToolTurnResult(call.id, "已记录", null)
+        }
         val tool = tools.byName(call.name)
         val result = if (tool == null) {
             "未知工具：${call.name}"
@@ -703,12 +837,21 @@ class ChatViewModel(
     companion object {
         /** 单轮用户消息最多允许的工具往返次数（首轮 + 3 次工具续流） */
         private const val MAX_TOOL_ROUNDS = 4
+
+        private const val GAME_TOOL_NAME = "update_game_state"
+
+        /** 块通道的 game 指令（贴最后一条 user 消息末尾） */
+        private const val GAME_BLOCK_SUFFIX =
+            "请在回复正文结束后，另起一行输出：\n" +
+                "<game>{\"relation\":{\"target\":\"self\",\"delta\":0},\"choices\":[\"选项一\",\"选项二\",\"选项三\",\"选项四\"]}</game>\n" +
+                "（delta 为 -10 到 10 的整数，无变化填 0；choices 给四个用户此刻能做的具体动作。不要在正文里提到这个标记。）"
     }
 
     private fun ConversationEntity.toUi() = Conversation(
         id = id,
         title = title,
         assistantId = assistantId,
+        sessionId = sessionId,
         systemPrompt = systemPrompt,
         maxTokens = maxTokens,
         temperature = temperature,
@@ -720,6 +863,7 @@ class ChatViewModel(
         id = id,
         title = title,
         assistantId = assistantId,
+        sessionId = sessionId,
         systemPrompt = systemPrompt,
         maxTokens = maxTokens,
         temperature = temperature,

@@ -17,6 +17,8 @@ data class ConversationEntity(
     @PrimaryKey val id: String,
     val title: String,
     val assistantId: String = AssistantEntity.DEFAULT_ID,
+    /** 绑定的游戏存档（null = 普通聊天，无账本） */
+    val sessionId: String? = null,
     val systemPrompt: String = "",
     val maxTokens: Int = 0,
     val temperature: Double = -1.0,
@@ -39,6 +41,9 @@ interface ConversationDao {
 
     @Query("SELECT * FROM conversations WHERE id = :id")
     suspend fun findById(id: String): ConversationEntity?
+
+    @Query("SELECT * FROM conversations WHERE sessionId = :sessionId ORDER BY updatedAt DESC")
+    suspend fun loadBySession(sessionId: String): List<ConversationEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(conversation: ConversationEntity)
