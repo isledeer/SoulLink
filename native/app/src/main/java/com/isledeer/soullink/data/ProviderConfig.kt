@@ -51,6 +51,13 @@ data class AppSettings(
     val defaultMaxTokens: Int = 2048,
     /** 联网搜索引擎的 API Key（bing / bocha / tavily / exa） */
     val searchKeys: Map<String, String> = emptyMap(),
+    /** 颜色模式：system / dark / light（设置页持久化，启动时应用） */
+    val colorMode: String = "dark",
+    /** 语音合成语速 / 音调 */
+    val ttsRate: Float = 1.0f,
+    val ttsPitch: Float = 1.0f,
+    /** MCP 服务器列表（JSON 数组字符串） */
+    val mcpServersJson: String = "[]",
 ) {
     fun providerFor(feature: Feature): ProviderConfig? {
         val binding = bindings[feature] ?: bindings[Feature.CHAT] ?: return providers.firstOrNull()
@@ -93,6 +100,10 @@ data class AppSettings(
             .put("defaultTopP", defaultTopP)
             .put("defaultMaxTokens", defaultMaxTokens)
             .put("searchKeys", JSONObject(searchKeys))
+            .put("colorMode", colorMode)
+            .put("ttsRate", ttsRate.toDouble())
+            .put("ttsPitch", ttsPitch.toDouble())
+            .put("mcpServersJson", mcpServersJson)
             .toString()
     }
 
@@ -146,6 +157,10 @@ data class AppSettings(
                     searchKeys = root.optJSONObject("searchKeys")?.let { obj ->
                         obj.keys().asSequence().associateWith { key -> obj.optString(key) }
                     } ?: emptyMap(),
+                    colorMode = root.optString("colorMode", "dark"),
+                    ttsRate = root.optDouble("ttsRate", 1.0).toFloat(),
+                    ttsPitch = root.optDouble("ttsPitch", 1.0).toFloat(),
+                    mcpServersJson = root.optString("mcpServersJson", "[]"),
                 )
             }.getOrElse { AppSettings() }
         }

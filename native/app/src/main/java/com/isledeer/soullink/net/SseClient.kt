@@ -58,6 +58,19 @@ private class ToolFragment {
     val args = StringBuilder()
 }
 
+/** 请求日志环形缓冲（设置页「请求日志」与 RAW 调试面板共用）。 */
+object RequestLog {
+    private const val MAX = 200
+    private val entries = java.util.Collections.synchronizedList(mutableListOf<String>())
+
+    fun add(line: String) {
+        entries.add(0, line)
+        while (entries.size > MAX) entries.removeAt(entries.size - 1)
+    }
+
+    fun snapshot(): List<String> = synchronized(entries) { entries.toList() }
+}
+
 /**
  * 原生 SSE 客户端。callbackFlow 保证可取消：collector 取消 → awaitClose 里 call.cancel()
  * → 阻塞读立刻退出，这就是「停止」按钮的实现。
@@ -132,6 +145,11 @@ class SseClient(
 
             try {
                 call.execute().use { response ->
+                    val code = response.code
+                    RequestLog.add(
+                        "${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())} " +
+                            "POST /v1/chat/completions -> $code"
+                    )
                     if (!response.isSuccessful) {
                         val snippet = runCatching { response.body?.string()?.take(300) }
                             .getOrNull().orEmpty()
@@ -186,10 +204,10 @@ class SseClient(
     }
 
     /** DALL·E 风格生图：POST /v1/images/generations（b64_json），返回 base64 */
-    suspend fun generateImage(baseUrl: String, apiKey: String, prompt: String): String? =
+    suspend fun generateImage(baseUrl: String, apiKey: String, prompt: String, model: String = "dall-e-3"): String? =
         withContext(Dispatchers.IO) {
             val body = JSONObject()
-                .put("model", "dall-e-3")
+                .put("model", model)
                 .put("prompt", prompt)
                 .put("n", 1)
                 .put("size", "1024x1024")
@@ -222,6 +240,7 @@ class SseClient(
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 val snippet = runCatching { response.body?.string()?.take(200) }.getOrNull().orEmpty()
+                RequestLog.add("GET ${modelsUrl(baseUrl)} -> ${response.code}")
                 throw IOException("HTTP ${response.code} $snippet")
             }
             val body = response.body?.string().orEmpty()
@@ -254,7 +273,7 @@ class SseClient(
         }
     }
 
-    private fun buildRequest(req: ChatRequest): Request {
+    private fun buildBody(req: ChatRequest, stream: Boolean): JSONObject {
         val messages = JSONArray()
 
         if (req.systemPrompt.isNotBlank()) {
@@ -291,12 +310,12 @@ class SseClient(
         val body = JSONObject()
             .put("model", req.model)
             .put("messages", messages)
-            .put("stream", true)
+            .put("stream", stream)
             .put("max_tokens", req.maxTokens)
             .put("temperature", req.temperature)
             .put("top_p", req.topP)
 
-        if (req.includeUsage) {
+        if (stream && req.includeUsage) {
             body.put("stream_options", JSONObject().put("include_usage", true))
         }
 
@@ -314,6 +333,10 @@ class SseClient(
             body.put(key, parsed ?: value)
         }
 
+        return body
+    }
+
+    private fun buildRequest(req: ChatRequest): Request {
         val builder = Request.Builder()
             .url(chatCompletionsUrl(req.baseUrl))
             .addHeader("Content-Type", "application/json")
@@ -325,8 +348,38 @@ class SseClient(
         }
 
         return builder
-            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .post(buildBody(req, true).toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
+    }
+
+    /** 非流式补全：一次性返回正文（记忆摘要 / 世界书 AI 填充用）。 */
+    suspend fun complete(request: ChatRequest): String = withContext(Dispatchers.IO) {
+        val req = Request.Builder()
+            .url(chatCompletionsUrl(request.baseUrl))
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", "Bearer ${request.apiKey}")
+            .post(buildBody(request, false).toString().toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+
+        val started = System.currentTimeMillis()
+        client.newCall(req).execute().use { response ->
+            val code = response.code
+            RequestLog.add(
+                "${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())} " +
+                    "POST /v1/chat/completions(non-stream) -> $code (${System.currentTimeMillis() - started}ms)"
+            )
+            if (!response.isSuccessful) {
+                val snippet = runCatching { response.body?.string()?.take(200) }.getOrNull().orEmpty()
+                throw IOException("HTTP $code $snippet")
+            }
+            val root = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
+            if (root == null) {
+                ""
+            } else {
+                root.optJSONArray("choices")?.optJSONObject(0)
+                    ?.optJSONObject("message")?.optString("content").orEmpty()
+            }
+        }
     }
 
     companion object {

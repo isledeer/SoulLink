@@ -17,11 +17,23 @@ class Speaker(private val context: Context) {
     private var ready = false
     private var pending: String? = null
     private var initializing = false
+    private var rate = 1.0f
+    private var pitch = 1.0f
+
+    /** 语速 / 音调（设置页可调，落盘后由 ChatViewModel 注入） */
+    fun configure(rate: Float, pitch: Float) {
+        this.rate = rate
+        this.pitch = pitch
+        tts?.setSpeechRate(rate)
+        tts?.setPitch(pitch)
+    }
 
     fun speak(text: String) {
         if (text.isBlank()) return
 
         if (ready) {
+            tts?.setSpeechRate(rate)
+            tts?.setPitch(pitch)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "soullink-utterance")
             return
         }
@@ -33,6 +45,8 @@ class Speaker(private val context: Context) {
                 ready = status == TextToSpeech.SUCCESS
                 if (ready) {
                     tts?.language = Locale.getDefault()
+                    tts?.setSpeechRate(rate)
+                    tts?.setPitch(pitch)
                     pending?.let { queued ->
                         tts?.speak(queued, TextToSpeech.QUEUE_FLUSH, null, "soullink-utterance")
                         pending = null

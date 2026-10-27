@@ -4,6 +4,7 @@ import com.isledeer.soullink.data.AppDatabase
 import com.isledeer.soullink.data.GameLedgerRepository
 import com.isledeer.soullink.data.MessageTreeRepository
 import com.isledeer.soullink.data.SettingsRepository
+import com.isledeer.soullink.net.SearchService
 import com.isledeer.soullink.net.SseClient
 import com.isledeer.soullink.tools.LocalTools
 import com.isledeer.soullink.ui.ChatViewModel
@@ -33,9 +34,10 @@ val appModule = module {
 
     // 网络
     single { SseClient() }
+    single { SearchService() }
 
     // ViewModel
-    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { AssistantViewModel(get(), get(), get()) }
 }

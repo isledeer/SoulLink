@@ -96,6 +96,17 @@ class SettingsViewModel(
         _state.value = _state.value.copy(bindings = bindings)
     }
 
+    /** 颜色模式（system / dark / light）：写状态 + 立即落盘 */
+    fun setColorMode(mode: String) {
+        _state.value = _state.value.copy(colorMode = mode)
+        viewModelScope.launch { repository.save(_state.value) }
+    }
+
+    /** TTS 语速 / 音调 */
+    fun setTts(rate: Float, pitch: Float) {
+        _state.value = _state.value.copy(ttsRate = rate, ttsPitch = pitch)
+    }
+
     fun save() {
         viewModelScope.launch { repository.save(_state.value) }
     }

@@ -24,6 +24,7 @@ import com.isledeer.soullink.data.UIMessageEntity
 import com.isledeer.soullink.data.isGameEnabled
 import com.isledeer.soullink.net.ChatRequest
 import com.isledeer.soullink.net.ChatTurn
+import com.isledeer.soullink.net.SearchService
 import com.isledeer.soullink.net.SseClient
 import com.isledeer.soullink.net.SseEvent
 import com.isledeer.soullink.tools.LocalTool
@@ -56,6 +57,7 @@ class ChatViewModel(
     private val tools: LocalTools,
     private val ledger: GameLedgerRepository,
     private val speaker: Speaker,
+    private val searchService: SearchService,
 ) : ViewModel() {
 
     private val _settings = MutableStateFlow(AppSettings())
@@ -84,6 +86,12 @@ class ChatViewModel(
     private var gameActive = false
     private var activeSession: GameSessionEntity? = null
     private val pendingGameActions = mutableListOf<GameAction>()
+
+    /** 记忆摘要：conversationId -> (覆盖标记, 摘要文本)；标记 "manual" = /compact 手动压缩 */
+    private val memoryCache = mutableMapOf<String, Pair<String, String>>()
+
+    private val _memorySummary = MutableStateFlow<String?>(null)
+    val memorySummary: StateFlow<String?> = _memorySummary.asStateFlow()
 
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
@@ -146,12 +154,18 @@ class ChatViewModel(
             settingsRepository.flow.collect { settings ->
                 _settings.value = settings
                 refreshModelName()
-                val provider = settings.providerFor(Feature.CHAT)
+                // 生图独立 Provider：优先 IMAGE 绑定，回落到 CHAT
+                val provider = settings.providerFor(Feature.IMAGE) ?: settings.providerFor(Feature.CHAT)
+                val imageModel = settings.bindings[Feature.IMAGE]?.model
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "dall-e-3"
                 tools.imageGenerator = if (provider != null && provider.baseUrl.isNotBlank()) {
-                    { prompt -> runBlocking { sse.generateImage(provider.baseUrl, provider.apiKey, prompt) } }
+                    { prompt -> runBlocking { sse.generateImage(provider.baseUrl, provider.apiKey, prompt, imageModel) } }
                 } else {
                     null
                 }
+                tools.speaker = { text -> speaker.speak(text) }
+                speaker.configure(settings.ttsRate, settings.ttsPitch)
             }
         }
         viewModelScope.launch { bootstrap() }
@@ -193,6 +207,7 @@ class ChatViewModel(
             _current.value = entity.toUi()
             _messages.value = emptyList()
             _gameState.value = null
+            _memorySummary.value = null
         }
     }
 
@@ -207,6 +222,7 @@ class ChatViewModel(
             refreshModelName()
             reloadMessages(id)
             refreshGameState(id)
+            _memorySummary.value = memoryCache[id]?.takeIf { it.first == "manual" }?.second
         }
     }
 
@@ -215,6 +231,7 @@ class ChatViewModel(
             conversationDao.delete(id)
             tree.clear(id)
             ledger.deleteForConversation(id)
+            memoryCache.remove(id)
             val remaining = conversationDao.loadAll()
             if (remaining.isEmpty()) {
                 val fresh = newConversationEntity(_assistants.value.firstOrNull())
@@ -533,7 +550,11 @@ class ChatViewModel(
         _isGenerating.value = true
         reloadMessages(conversation.id, markStreaming = messageId)
 
-        // 2) 组请求
+        // 2) 组请求（记忆 / 联网搜索增强段在请求前拼好，不污染消息树）
+        val usable = _messages.value.filter {
+            !it.isStreaming && !it.isError && (it.text.isNotBlank() || it.imageBase64 != null)
+        }
+        val finalSystemPrompt = buildEnhancedPrompt(conversation, config, usable)
         val turns = buildTurns(config)
         val startedAt = SystemClock.elapsedRealtime()
         var usageTokens = 0
@@ -558,7 +579,7 @@ class ChatViewModel(
                             apiKey = config.provider?.apiKey.orEmpty(),
                             model = config.model,
                             turns = turnsInFlight,
-                            systemPrompt = config.systemPrompt,
+                            systemPrompt = finalSystemPrompt,
                             maxTokens = config.maxTokens,
                             temperature = config.temperature,
                             topP = config.topP,
@@ -774,6 +795,130 @@ class ChatViewModel(
         }
     }
 
+    /** 记忆 + 联网搜索增强段（请求前拼好，不污染消息树） */
+    private suspend fun buildEnhancedPrompt(
+        conversation: Conversation,
+        config: ResolvedConfig,
+        usable: List<ChatMessage>,
+    ): String {
+        val sections = mutableListOf<String>()
+        config.systemPrompt.takeIf { it.isNotBlank() }?.let { sections.add(it) }
+
+        val assistant = _currentAssistant.value
+        val compressOn = _autoCompress.value || assistant?.enableMemory == true
+        if (compressOn && usable.size > MEMORY_THRESHOLD) {
+            memorySection(conversation, config, usable)?.let { sections.add(it) }
+        }
+        if (isSearchEnabled.value) {
+            val query = usable.lastOrNull { it.role == Role.User }?.text
+            if (!query.isNullOrBlank()) {
+                searchSection(query)?.let { sections.add(it) }
+            }
+        }
+        return sections.joinToString("\n\n")
+    }
+
+    /** 记忆段：/compact 的会话记忆 + 超长上下文自动摘要（带缓存） */
+    private suspend fun memorySection(
+        conversation: Conversation,
+        config: ResolvedConfig,
+        usable: List<ChatMessage>,
+    ): String? {
+        val parts = mutableListOf<String>()
+        memoryCache[conversation.id]?.takeIf { it.first == "manual" }?.second?.let {
+            parts.add("【会话记忆】\n$it")
+        }
+
+        val old = usable.dropLast(KEEP_RECENT)
+        if (old.isNotEmpty() && config.isConfigured) {
+            val upTo = old.last().id
+            val cached = memoryCache[conversation.id]
+            if (cached != null && cached.first == upTo && cached.second.isNotBlank()) {
+                parts.add("【历史记忆】\n${cached.second}")
+            } else {
+                val turns = old.map {
+                    ChatTurn(role = it.role.apiName, content = it.text, imageBase64 = it.imageBase64)
+                }
+                val summary = runCatching {
+                    sse.complete(
+                        ChatRequest(
+                            baseUrl = config.provider?.baseUrl.orEmpty(),
+                            apiKey = config.provider?.apiKey.orEmpty(),
+                            model = config.model,
+                            turns = turns,
+                            systemPrompt = "你是对话摘要器。把对话压缩成要点记忆，保留人物、事件、约定、用户偏好，不超过 300 字，直接输出要点。",
+                            maxTokens = 600,
+                            temperature = 0.3,
+                        )
+                    )
+                }.getOrNull()?.trim()
+                if (!summary.isNullOrBlank()) {
+                    memoryCache[conversation.id] = upTo to summary
+                    parts.add("【历史记忆】\n$summary")
+                }
+            }
+        }
+        return parts.joinToString("\n\n").ifBlank { null }
+    }
+
+    /** 联网搜索：按启用的引擎逐个尝试，第一个成功的返回结果段 */
+    private suspend fun searchSection(query: String): String? {
+        val keys = _settings.value.searchKeys
+        for ((engine, _) in SearchService.ENGINES) {
+            if (_searchEngines.value[engine] != true) continue
+            val key = keys[engine]
+            if (key.isNullOrBlank()) continue
+            val result = runCatching { searchService.search(engine, key, query) }.getOrNull()
+            if (!result.isNullOrBlank()) {
+                return "【联网搜索结果】\n$result"
+            }
+        }
+        return null
+    }
+
+    /** /compact：压缩当前上下文为会话记忆，清空历史；摘要自动注入后续请求 */
+    fun compactNow(onDone: (String) -> Unit = {}) {
+        val conv = _current.value ?: return
+        if (_isGenerating.value) return
+        viewModelScope.launch {
+            val assistant = _currentAssistant.value ?: _assistants.value.firstOrNull()
+            val config = ConfigResolver.resolve(_settings.value, assistant, conv.toEntity(), tools)
+            val usable = _messages.value.filter {
+                !it.isStreaming && !it.isError && (it.text.isNotBlank() || it.imageBase64 != null)
+            }
+            var summary: String? = null
+            if (config.isConfigured && usable.isNotEmpty()) {
+                val turns = usable.map {
+                    ChatTurn(role = it.role.apiName, content = it.text, imageBase64 = it.imageBase64)
+                }
+                summary = runCatching {
+                    sse.complete(
+                        ChatRequest(
+                            baseUrl = config.provider?.baseUrl.orEmpty(),
+                            apiKey = config.provider?.apiKey.orEmpty(),
+                            model = config.model,
+                            turns = turns,
+                            systemPrompt = "你是对话摘要器。把对话压缩成要点记忆，保留人物、事件、约定、用户偏好，不超过 300 字，直接输出要点。",
+                            maxTokens = 600,
+                            temperature = 0.3,
+                        )
+                    )
+                }.getOrNull()?.trim()
+            }
+            val text = summary
+            if (!text.isNullOrBlank()) {
+                memoryCache[conv.id] = "manual" to text
+                _memorySummary.value = text
+            }
+            tree.clear(conv.id)
+            ledger.deleteForConversation(conv.id)
+            _messages.value = emptyList()
+            _tokenUsage.value = 0
+            refreshGameState(conv.id)
+            onDone(text ?: "上下文已清空")
+        }
+    }
+
     private fun newConversationEntity(assistant: AssistantEntity?): ConversationEntity {
         val now = System.currentTimeMillis()
         return ConversationEntity(
@@ -837,6 +982,10 @@ class ChatViewModel(
     companion object {
         /** 单轮用户消息最多允许的工具往返次数（首轮 + 3 次工具续流） */
         private const val MAX_TOOL_ROUNDS = 4
+
+        /** 超过 12 条消息触发自动摘要，保留最近 8 条原文 */
+        private const val MEMORY_THRESHOLD = 12
+        private const val KEEP_RECENT = 8
 
         private const val GAME_TOOL_NAME = "update_game_state"
 

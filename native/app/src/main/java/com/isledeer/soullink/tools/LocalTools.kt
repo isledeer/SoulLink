@@ -33,7 +33,10 @@ class LocalTools(private val context: Context) {
      *  非 suspend：executor 统一是普通 lambda，suspend 调用在注入侧用 runBlocking 消化。 */
     var imageGenerator: ((String) -> String?)? = null
 
-    val all: List<LocalTool> = listOf(timeTool(), clipboardTool(), imageTool(), gameTool())
+    /** 朗读钩子：由 ChatViewModel 注入 Speaker。 */
+    var speaker: ((String) -> Unit)? = null
+
+    val all: List<LocalTool> = listOf(timeTool(), clipboardTool(), imageTool(), ttsTool(), gameTool())
 
     fun byId(id: String): LocalTool? = all.firstOrNull { it.id == id }
 
@@ -92,6 +95,33 @@ class LocalTools(private val context: Context) {
                     "生图未配置：当前运营商不支持生图端点"
                 } else {
                     generator(prompt) ?: "生图失败：检查运营商与 Key"
+                }
+            }
+        },
+    )
+
+    /** 文字转语音：朗读一段文本（由注入的 speaker 钩子执行）。 */
+    private fun ttsTool(): LocalTool = LocalTool(
+        id = "tts",
+        name = "speak_text",
+        description = "朗读一段文字。当用户要求「读出来」「朗读」时调用。",
+        parameters = JSONObject()
+            .put("type", "object")
+            .put(
+                "properties",
+                JSONObject().put("text", JSONObject().put("type", "string").put("description", "要朗读的文字"))
+            ),
+        executor = { args: JSONObject ->
+            val text = args.optString("text")
+            if (text.isBlank()) {
+                "没有要朗读的文字"
+            } else {
+                val speak = speaker
+                if (speak == null) {
+                    "语音合成未初始化"
+                } else {
+                    speak(text)
+                    "已朗读"
                 }
             }
         },
@@ -183,6 +213,7 @@ class LocalTools(private val context: Context) {
             Triple("time", "时间信息", "允许模型查询当前日期与时间"),
             Triple("clipboard", "剪贴板", "允许模型读取剪贴板文本"),
             Triple("image", "生图", "允许模型调用 DALL·E 风格生图（结果以图片显示）"),
+            Triple("tts", "文字转语音", "允许模型朗读文字"),
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.isledeer.soullink
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -9,8 +10,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
+import com.isledeer.soullink.data.SettingsRepository
+import com.isledeer.soullink.ui.AppTheme
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.SoulLinkApp
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
  * 纯 Compose 外壳入口。
@@ -21,15 +26,16 @@ import com.isledeer.soullink.ui.SoulLinkApp
  * 将来只供 WorldBookScreen 挂世界书面板时按需复用。
  *
  * 这里只做三件事：
- *   1. 刷状态栏 / 导航栏颜色（与 Compose 背景同色，避免顶部一条色差）
- *   2. 套一层深色 MaterialTheme（色板来自 GlassTokens，和聊天页一致）
- *   3. 交给 SoulLinkApp 的 NavHost 决定首屏
+ *   1. 按持久化的颜色模式应用色板（system / dark / light）
+ *   2. 刷状态栏 / 导航栏颜色（与 Compose 背景同色，避免顶部一条色差）
+ *   3. 套一层 MaterialTheme（色板来自 GlassTokens，和聊天页一致）
  */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        applyPersistedTheme()
         setupSystemBars()
 
         setContent {
@@ -49,6 +55,24 @@ class MainActivity : ComponentActivity() {
                 SoulLinkApp()
             }
         }
+    }
+
+    /** 读取持久化颜色模式并切换色板；system 跟随系统深浅色设置。 */
+    private fun applyPersistedTheme() {
+        val stored = runCatching {
+            runBlocking { SettingsRepository(applicationContext).flow.first() }
+        }.getOrNull()
+        val mode = stored?.colorMode ?: "dark"
+        val resolved = when (mode) {
+            "light" -> "light"
+            "system" -> {
+                val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                    Configuration.UI_MODE_NIGHT_YES
+                if (night) "dark" else "light"
+            }
+            else -> "dark"
+        }
+        AppTheme.apply(resolved)
     }
 
     /**

@@ -74,22 +74,55 @@ fun Modifier.liquidGlass(
         )
 }
 
-/** 统一的圆角与色板，避免各处硬编码 */
+/** 统一的圆角与色板，避免各处硬编码。
+ *  颜色为可变变量：AppTheme.apply() 按设置切换深浅两套色板后，
+ *  Activity 重建（recreate）即全界面生效。 */
 object GlassTokens {
     val PanelRadius = 24.dp
     val BarRadius = 20.dp
     val PillRadius = 26.dp
 
-    val BackgroundTop = Color(0xFF12253F)
-    val BackgroundBottom = Color(0xFF070B14)
+    var BackgroundTop = Color(0xFF12253F)
+    var BackgroundBottom = Color(0xFF070B14)
 
-    val Primary = Color(0xFF0EA5E9)
-    val PrimaryDeep = Color(0xFF0284C7)
-    val Accent = Color(0xFFF43F5E)
+    var Primary = Color(0xFF0EA5E9)
+    var PrimaryDeep = Color(0xFF0284C7)
+    var Accent = Color(0xFFF43F5E)
 
-    val TextPrimary = Color(0xFFF1F5F9)
-    val TextSecondary = Color(0xFF94A3B8)
+    var TextPrimary = Color(0xFFF1F5F9)
+    var TextSecondary = Color(0xFF94A3B8)
 
-    val BubbleAi = Color(0xFF1E293B)
-    val BubbleUser = Color(0xFF0284C7)
+    var BubbleAi = Color(0xFF1E293B)
+    var BubbleUser = Color(0xFF0284C7)
+}
+
+/** 颜色模式（system / dark / light）→ 色板切换 */
+object AppTheme {
+
+    private val dark = longArrayOf(
+        // BackgroundTop / BackgroundBottom / Primary / PrimaryDeep / Accent / TextPrimary / TextSecondary / BubbleAi / BubbleUser
+        0xFF12253F, 0xFF070B14, 0xFF0EA5E9, 0xFF0284C7, 0xFFF43F5E,
+        0xFFF1F5F9, 0xFF94A3B8, 0xFF1E293B, 0xFF0284C7,
+    )
+
+    private val light = longArrayOf(
+        0xFFEAF2FB, 0xFFCFDEEF, 0xFF0284C7, 0xFF075985, 0xFFE11D48,
+        0xFF0F172A, 0xFF475569, 0xFFFFFFFF, 0xFF0284C7,
+    )
+
+    fun apply(mode: String) {
+        val palette = when (mode) {
+            "light" -> light
+            else -> dark
+        }
+        GlassTokens.BackgroundTop = Color(palette[0])
+        GlassTokens.BackgroundBottom = Color(palette[1])
+        GlassTokens.Primary = Color(palette[2])
+        GlassTokens.PrimaryDeep = Color(palette[3])
+        GlassTokens.Accent = Color(palette[4])
+        GlassTokens.TextPrimary = Color(palette[5])
+        GlassTokens.TextSecondary = Color(palette[6])
+        GlassTokens.BubbleAi = Color(palette[7])
+        GlassTokens.BubbleUser = Color(palette[8])
+    }
 }
