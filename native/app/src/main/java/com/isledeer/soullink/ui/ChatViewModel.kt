@@ -21,6 +21,7 @@ import com.isledeer.soullink.data.McpServerConfig
 import com.isledeer.soullink.data.ProviderConfig
 import com.isledeer.soullink.data.ResolvedConfig
 import com.isledeer.soullink.data.SettingsRepository
+import com.isledeer.soullink.data.SkillsRegistry
 import com.isledeer.soullink.data.UIMessageEntity
 import com.isledeer.soullink.data.WorldBookDao
 import com.isledeer.soullink.data.WorldDoc
