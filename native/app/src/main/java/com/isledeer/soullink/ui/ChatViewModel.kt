@@ -485,6 +485,18 @@ class ChatViewModel(
         viewModelScope.launch { assistantDao.upsert(updated) }
     }
 
+    /** 切换当前助手启用的技能并落库 */
+    fun toggleSkill(id: String) {
+        val assistant = _currentAssistant.value ?: return
+        val list = assistant.skillList().toMutableList()
+        if (list.contains(id)) list.remove(id) else list.add(id)
+        val array = org.json.JSONArray()
+        list.forEach { array.put(it) }
+        val updated = assistant.copy(enabledSkills = array.toString(), updatedAt = System.currentTimeMillis())
+        _currentAssistant.value = updated
+        viewModelScope.launch { assistantDao.upsert(updated) }
+    }
+
     /** 顶栏模型选择：写入当前助手的 chatModelId */
     fun setAssistantModel(model: String) {
         val assistant = _currentAssistant.value ?: return
@@ -960,6 +972,11 @@ class ChatViewModel(
         config.systemPrompt.takeIf { it.isNotBlank() }?.let { sections.add(it) }
 
         val assistant = _currentAssistant.value
+
+        // 助手技能：勾选的技能指令注入
+        val skillIds = assistant?.skillList().orEmpty()
+        SkillsRegistry.buildSection(skillIds).takeIf { it.isNotBlank() }?.let { sections.add(it) }
+
         val compressOn = _autoCompress.value || assistant?.enableMemory == true
         if (compressOn && usable.size > MEMORY_THRESHOLD) {
             memorySection(conversation, config, usable)?.let { sections.add(it) }

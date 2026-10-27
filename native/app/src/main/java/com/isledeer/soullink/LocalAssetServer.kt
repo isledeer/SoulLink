@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 端口必须**固定**：换了端口就等于换了 origin，用户存档会「凭空消失」。
  * 默认 38517，被占用时依次 +1 兜底（此时该次运行读不到旧数据，属极端情况）。
  */
+@Deprecated("WebView 时代遗留，世界书已改用原生 Compose 页面，此类仅留档。")
 class LocalAssetServer(private val context: Context) {
 
     private var serverSocket: ServerSocket? = null

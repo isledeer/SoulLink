@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit
  * 本阶段它只是"可用通道"，React 仍走自己的 fetch（第一步不强行接管）；
  * 第二阶段把 apiClient 换成桥调用即可。
  */
+@Deprecated("WebView 时代遗留，世界书已改用原生 Compose 页面，此类仅留档。")
 class NativeSSE(private val webView: WebView) {
 
     private val main = Handler(Looper.getMainLooper())

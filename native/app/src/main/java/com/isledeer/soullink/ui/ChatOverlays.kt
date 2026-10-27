@@ -276,36 +276,6 @@ private fun SheetRow(
     }
 }
 
-/* ------------------------ 附件 / 快捷菜单 ------------------------ */
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AttachSheet(
-    onDismiss: () -> Unit,
-    onPickPhoto: () -> Unit,
-    onCamera: () -> Unit,
-    onVoice: () -> Unit,
-    onDocument: () -> Unit,
-    onFile: () -> Unit,
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color(0xF2070B14),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            SheetRow("照片", "从相册选择图片（多模态）", onPickPhoto, onDismiss)
-            SheetRow("拍照", "调用系统相机拍摄", onCamera, onDismiss)
-            SheetRow("语音输入", "用系统识别把语音转成文字", onVoice, onDismiss)
-            SheetRow("文档", "PDF / DOCX / TXT 提取文本", onDocument, onDismiss)
-            SheetRow("文件", "暂未开放", onFile, onDismiss)
-            SheetRow("网络搜索", "当前版本未接入", {}, onDismiss)
-            SheetRow("MCP", "未连接任何 MCP 服务", {}, onDismiss)
-            Spacer(Modifier.height(24.dp))
-        }
-    }
-}
-
 /* ------------------------- 对话级设置卡片 ------------------------- */
 
 @Composable
@@ -386,48 +356,6 @@ fun ConversationSettingsDialog(
                     Text("保存", color = GlassTokens.Primary)
                 }
             }
-        }
-    }
-}
-
-/* ---------------------------- 快捷短语 ---------------------------- */
-
-private val QUICK_PROMPTS = listOf(
-    "继续",
-    "换个说法",
-    "展开细节",
-    "简短一点",
-    "用第一人称重写",
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun QuickPromptsSheet(
-    onDismiss: () -> Unit,
-    onPick: (String) -> Unit,
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color(0xF2070B14),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text("快捷短语", color = GlassTokens.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
-            QUICK_PROMPTS.forEach { prompt ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable {
-                            onPick(prompt)
-                            onDismiss()
-                        }
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                ) {
-                    Text(prompt, color = GlassTokens.TextPrimary, fontSize = 14.sp)
-                }
-            }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }

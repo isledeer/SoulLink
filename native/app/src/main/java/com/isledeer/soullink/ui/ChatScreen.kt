@@ -42,7 +42,6 @@ import com.isledeer.soullink.ui.chat.AttachBottomSheet
 import com.isledeer.soullink.ui.chat.ChatInputBar
 import com.isledeer.soullink.ui.chat.ToolsBottomSheet
 import com.isledeer.soullink.ui.components.ModelPickerSheet
-import com.isledeer.soullink.util.DocumentParser
 import com.isledeer.soullink.util.ImageUtils
 import androidx.core.content.FileProvider
 import java.io.File
@@ -101,6 +100,8 @@ fun ChatScreen(
     mcpServers: List<Pair<String, String>>,
     enabledMcp: Set<String>,
     onToggleMcp: (String) -> Unit,
+    assistantSkills: Set<String>,
+    onToggleSkill: (String) -> Unit,
     onCompact: () -> Unit,
     gameState: GameState?,
     worldNpcs: List<WorldNpc>,
@@ -129,6 +130,7 @@ fun ChatScreen(
     var usageDialogVisible by remember { mutableStateOf(false) }
     var memoryDialogVisible by remember { mutableStateOf(false) }
     var mcpDialogVisible by remember { mutableStateOf(false) }
+    var skillsDialogVisible by remember { mutableStateOf(false) }
     var treeDialogVisible by remember { mutableStateOf(false) }
     var rawDialogVisible by remember { mutableStateOf(false) }
     var contextDialogVisible by remember { mutableStateOf(false) }
@@ -159,17 +161,6 @@ fun ChatScreen(
             scope.launch {
                 val base64 = withContext(Dispatchers.IO) { ImageUtils.uriToBase64(context, uri) }
                 if (base64 != null) pendingImage = base64 else notice = "拍照读取失败"
-            }
-        }
-    }
-
-    val pickDocument = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                val text = withContext(Dispatchers.IO) { DocumentParser.extract(context, uri) }
-                if (text.startsWith("（")) notice = text else input = input + text
             }
         }
     }
@@ -261,7 +252,7 @@ fun ChatScreen(
                     onShareExport = { exportConversation(context, current, messages) },
                     onUsage = { usageDialogVisible = true },
                     onMemory = { memoryDialogVisible = true },
-                    onSkills = { onOpenAssistants() },
+                    onSkills = { skillsDialogVisible = true },
                     onMcp = { mcpDialogVisible = true },
                     onTree = { treeDialogVisible = true },
                     onRawDebug = { rawDialogVisible = true },
@@ -408,7 +399,7 @@ fun ChatScreen(
             },
             onSkills = {
                 attachVisible = false
-                onOpenAssistants()
+                skillsDialogVisible = true
             },
         )
     }
@@ -502,6 +493,13 @@ fun ChatScreen(
             enabledMcp = enabledMcp,
             onToggleMcp = onToggleMcp,
             onDismiss = { mcpDialogVisible = false },
+        )
+    }
+    if (skillsDialogVisible) {
+        SkillsDialog(
+            enabled = assistantSkills,
+            onToggle = onToggleSkill,
+            onDismiss = { skillsDialogVisible = false },
         )
     }
     if (treeDialogVisible) {
@@ -828,6 +826,51 @@ private fun McpDialog(
                         Text(name, color = GlassTokens.TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                         Switch(checked = id in enabledMcp, onCheckedChange = { onToggleMcp(id) })
                     }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text("关闭", color = GlassTokens.TextSecondary) }
+            }
+        }
+    }
+}
+
+/* --------------------------- 技能面板 --------------------------- */
+
+@Composable
+private fun SkillsDialog(
+    enabled: Set<String>,
+    onToggle: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .padding(18.dp)
+        ) {
+            Text("会话中的技能", color = GlassTokens.TextPrimary, fontSize = 15.sp)
+            Spacer(Modifier.height(10.dp))
+            com.isledeer.soullink.data.SkillsRegistry.all.forEach { skill ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onToggle(skill.id) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(skill.name, color = GlassTokens.TextPrimary, fontSize = 13.sp)
+                        Text(
+                            text = skill.description,
+                            color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
+                            fontSize = 10.sp,
+                        )
+                    }
+                    Switch(checked = skill.id in enabled, onCheckedChange = { onToggle(skill.id) })
                 }
             }
             Spacer(Modifier.height(8.dp))

@@ -92,6 +92,8 @@ fun ChatRoute(
         mcpServers = parseMcpServers(settings.mcpServersJson).map { it.id to it.name },
         enabledMcp = currentAssistant?.mcpList()?.toSet().orEmpty(),
         onToggleMcp = viewModel::toggleMcpServer,
+        assistantSkills = currentAssistant?.skillList()?.toSet().orEmpty(),
+        onToggleSkill = viewModel::toggleSkill,
         onCompact = { viewModel.compactNow() },
         gameState = gameState,
         worldNpcs = worldNpcs,

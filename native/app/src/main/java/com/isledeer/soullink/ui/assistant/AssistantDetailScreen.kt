@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -241,6 +242,66 @@ fun AssistantDetailScreen(
                                 )
                             },
                         )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                /* ---------------- 技能 ---------------- */
+                CardGroup(title = "技能") {
+                    com.isledeer.soullink.data.SkillsRegistry.all.forEach { skill ->
+                        val enabled = draft.skillList().contains(skill.id)
+                        FormItem(
+                            title = skill.name,
+                            description = skill.description,
+                            tail = {
+                                Switch(
+                                    checked = enabled,
+                                    onCheckedChange = { checked ->
+                                        val list = draft.skillList().toMutableList()
+                                        if (checked) list.add(skill.id) else list.remove(skill.id)
+                                        draft = draft.copy(enabledSkills = toJsonArray(list))
+                                    },
+                                )
+                            },
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                /* ---------------- 快捷短语 ---------------- */
+                CardGroup(title = "快捷短语") {
+                    CardGroupItem {
+                        EmphasizedText(
+                            text = "每行一条，显示在聊天输入框上方",
+                            style = Emphasized.caption,
+                            color = GlassTokens.TextSecondary.copy(alpha = 0.6f),
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        var promptsText by remember(assistant.id) { mutableStateOf(draft.promptList().joinToString("\n")) }
+                        OutlinedTextField(
+                            value = promptsText,
+                            onValueChange = { promptsText = it },
+                            minLines = 2,
+                            maxLines = 5,
+                            shape = RoundedCornerShape(14.dp),
+                            placeholder = { Text("继续\n换个说法", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.4f)) },
+                            colors = glassFieldColors(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    val list = promptsText.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+                                    draft = draft.copy(quickPrompts = toJsonArray(list))
+                                },
+                            ) { Text("应用", color = GlassTokens.Primary, fontSize = 12.sp) }
+                        }
                     }
                 }
 

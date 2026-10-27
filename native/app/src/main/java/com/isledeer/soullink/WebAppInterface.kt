@@ -25,6 +25,7 @@ import org.json.JSONObject
  * 注意：@JavascriptInterface 方法跑在 JavaBridge 线程，触碰 Compose
  * 状态必须 post 回主线程（setTitle 就这么做）。
  */
+@Deprecated("WebView 时代遗留，世界书已改用原生 Compose 页面，此类仅留档。")
 class WebAppInterface(
     private val webView: WebView,
     private val onTitle: (String) -> Unit
