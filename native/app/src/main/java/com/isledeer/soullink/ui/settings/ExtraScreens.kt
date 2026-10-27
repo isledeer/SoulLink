@@ -68,7 +68,7 @@ import com.isledeer.soullink.ui.liquidGlass
 /* ----------------------------- 通用外壳 ----------------------------- */
 
 @Composable
-private fun PageShell(
+internal fun PageShell(
     title: String,
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
