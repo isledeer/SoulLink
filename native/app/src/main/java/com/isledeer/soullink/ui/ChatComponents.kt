@@ -195,13 +195,18 @@ fun MessageBubble(
                 modifier = Modifier
                     .widthIn(max = 310.dp)
                     .clip(shape)
-                    .background(
-                        when {
-                            isUser -> Brush.linearGradient(
-                                listOf(GlassTokens.BubbleUser, GlassTokens.BubbleUserEnd)
+                    .then(
+                        if (isUser) {
+                            Modifier.background(
+                                Brush.linearGradient(
+                                    listOf(GlassTokens.BubbleUser, GlassTokens.BubbleUserEnd)
+                                )
                             )
-                            message.isError -> GlassTokens.Danger.copy(alpha = 0.15f)
-                            else -> GlassTokens.BubbleAi.copy(alpha = 0.92f)
+                        } else {
+                            Modifier.background(
+                                if (message.isError) GlassTokens.Danger.copy(alpha = 0.15f)
+                                else GlassTokens.BubbleAi.copy(alpha = 0.92f)
+                            )
                         }
                     )
                     .then(

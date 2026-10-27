@@ -41,6 +41,7 @@ import com.isledeer.soullink.data.WorldNpc
 import com.isledeer.soullink.ui.chat.AttachBottomSheet
 import com.isledeer.soullink.ui.chat.ChatInputBar
 import com.isledeer.soullink.ui.chat.ToolsBottomSheet
+import com.isledeer.soullink.ui.components.AuroraBackground
 import com.isledeer.soullink.ui.components.ModelPickerSheet
 import com.isledeer.soullink.util.ImageUtils
 import androidx.core.content.FileProvider
