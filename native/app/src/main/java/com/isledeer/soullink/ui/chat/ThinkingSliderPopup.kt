@@ -61,8 +61,8 @@ fun ThinkingSliderPopup(
         Column(
             modifier = Modifier
                 .width(240.dp)
-                .background(GlassTokens.MenuBg, RoundedCornerShape(16.dp))
-                .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)), RoundedCornerShape(16.dp))
+                .background(GlassTokens.MenuBg, RoundedCornerShape(GlassTokens.CardRadius))
+                .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(14.dp)
         ) {
             Text("思考深度", color = GlassTokens.TextSecondary, fontSize = 11.sp)

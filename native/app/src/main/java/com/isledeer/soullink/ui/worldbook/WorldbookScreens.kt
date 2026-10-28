@@ -95,7 +95,7 @@ fun WorldBookListScreen(
                         color = GlassTokens.Primary,
                         fontSize = 12.sp,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .background(GlassTokens.Primary.copy(alpha = 0.14f))
                             .clickable { onStart(book.id) }
                             .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -108,7 +108,7 @@ fun WorldBookListScreen(
                         color = GlassTokens.TextSecondary,
                         fontSize = 11.sp,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .clickable { onOpen(book.id) }
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                     )
@@ -117,7 +117,7 @@ fun WorldBookListScreen(
                         color = GlassTokens.Accent,
                         fontSize = 11.sp,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .clickable { onDelete(book.id) }
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                     )
@@ -128,7 +128,7 @@ fun WorldBookListScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(GlassTokens.CardRadius))
                 .background(GlassTokens.Primary.copy(alpha = 0.16f))
                 .clickable { createVisible = true }
                 .padding(vertical = 12.dp),
@@ -139,7 +139,7 @@ fun WorldBookListScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(GlassTokens.CardRadius))
                 .background(GlassTokens.Divider)
                 .clickable { importVisible = true }
                 .padding(vertical = 12.dp),
@@ -181,7 +181,7 @@ private fun CreateWorldDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("新建世界书", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -190,7 +190,7 @@ private fun CreateWorldDialog(
                 value = title,
                 onValueChange = { title = it },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = { Text("世界名（可留空）", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f)) },
                 colors = worldFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
@@ -204,7 +204,7 @@ private fun CreateWorldDialog(
                         color = if (active) GlassTokens.Primary else GlassTokens.TextSecondary,
                         fontSize = 11.sp,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else GlassTokens.Divider)
                             .clickable { template = id }
                             .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -230,7 +230,7 @@ private fun ImportWorldDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("导入世界书", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -240,7 +240,7 @@ private fun ImportWorldDialog(
                 onValueChange = { raw = it },
                 minLines = 4,
                 maxLines = 8,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = { Text("粘贴世界书 JSON", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f)) },
                 colors = worldFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
@@ -354,7 +354,7 @@ fun WorldBookEditScreen(
                     color = GlassTokens.Accent,
                     fontSize = 11.sp,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                         .clickable { localEntries = localEntries.filterNot { it.id == entry.id } }
                         .padding(6.dp),
                 )
@@ -363,7 +363,7 @@ fun WorldBookEditScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                 .background(GlassTokens.Divider)
                 .clickable { addingEntry = true }
                 .padding(vertical = 8.dp),
@@ -374,7 +374,7 @@ fun WorldBookEditScreen(
         Button(
             onClick = { onAiFill(premise) },
             enabled = !busy,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary.copy(alpha = 0.2f), contentColor = GlassTokens.Primary),
             modifier = Modifier.fillMaxWidth().height(44.dp),
         ) { Text(if (busy) "AI 填充中…" else "AI 填充（按当前前提生成世界观）", fontSize = 13.sp) }
@@ -383,13 +383,13 @@ fun WorldBookEditScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = { onSave(currentBook(), localEntries) },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
                 modifier = Modifier.weight(1f).height(46.dp),
             ) { Text("保存", fontSize = 14.sp) }
             Button(
                 onClick = { onStart() },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary.copy(alpha = 0.2f), contentColor = GlassTokens.Primary),
                 modifier = Modifier.weight(1f).height(46.dp),
             ) { Text("开始游戏", fontSize = 14.sp) }
@@ -440,7 +440,7 @@ fun WorldBookEditScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                    .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                     .padding(18.dp)
             ) {
                 Text("高级 JSON", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -450,7 +450,7 @@ fun WorldBookEditScreen(
                     onValueChange = { text = it },
                     minLines = 8,
                     maxLines = 14,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(GlassTokens.ControlRadius),
                     colors = worldFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -497,7 +497,7 @@ private fun EntryDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text(if (initial == null) "添加条目" else "编辑条目", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -551,7 +551,7 @@ private fun WorldField(
             minLines = minLines,
             maxLines = if (minLines > 1) minLines + 4 else 1,
             singleLine = minLines == 1,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(GlassTokens.ControlRadius),
             colors = worldFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )

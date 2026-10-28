@@ -40,6 +40,10 @@ import com.isledeer.soullink.ui.components.UIAvatar
 import com.isledeer.soullink.ui.liquidGlass
 import com.isledeer.soullink.ui.components.AuroraBackground
 import org.json.JSONObject
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 
 private val PROMPT_VARIABLES = listOf("{{date}}", "{{time}}", "{{datetime}}", "{{device_info}}", "{{model}}")
 
@@ -64,7 +68,7 @@ fun AssistantDetailScreen(
     AuroraBackground(
         modifier = Modifier.fillMaxSize()
         ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -76,7 +80,7 @@ fun AssistantDetailScreen(
                 Box(
                     modifier = Modifier.size(36.dp).clip(CircleShape).clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
-                ) { Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp) }
+                ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp)) }
 
                 EmphasizedText(
                     text = "助手设置",
@@ -86,7 +90,7 @@ fun AssistantDetailScreen(
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                         .clickable {
                             onSave(
                                 draft.copy(
@@ -140,7 +144,7 @@ fun AssistantDetailScreen(
                                 color = if (draft.chatModelId.isNullOrBlank()) GlassTokens.TextSecondary else GlassTokens.TextPrimary,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text("›", color = GlassTokens.TextSecondary, fontSize = 15.sp)
+                            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(16.dp))
                         }
                     }
 
@@ -181,7 +185,7 @@ fun AssistantDetailScreen(
                             onValueChange = { prompt = it },
                             minLines = 5,
                             maxLines = 12,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(GlassTokens.CardRadius),
                             placeholder = {
                                 Text(
                                     "例如：你是 {{model}}，今天是 {{date}}。",
@@ -205,7 +209,7 @@ fun AssistantDetailScreen(
                             PROMPT_VARIABLES.take(4).forEach { variable ->
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                                         .background(GlassTokens.Primary.copy(alpha = 0.16f))
                                         .clickable { prompt = prompt + variable }
                                         .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -280,7 +284,7 @@ fun AssistantDetailScreen(
                             onValueChange = { promptsText = it },
                             minLines = 2,
                             maxLines = 5,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(GlassTokens.CardRadius),
                             placeholder = { Text("继续\n换个说法", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.4f)) },
                             colors = glassFieldColors(),
                             modifier = Modifier.fillMaxWidth(),
@@ -332,7 +336,7 @@ fun AssistantDetailScreen(
                             onValueChange = { headersText = it },
                             minLines = 2,
                             maxLines = 4,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(GlassTokens.CardRadius),
                             placeholder = { Text("HTTP-Referer: https://…", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.4f)) },
                             colors = glassFieldColors(),
                             modifier = Modifier.fillMaxWidth(),
@@ -349,7 +353,7 @@ fun AssistantDetailScreen(
                             onValueChange = { bodyText = it },
                             minLines = 2,
                             maxLines = 4,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(GlassTokens.CardRadius),
                             placeholder = { Text("reasoning_effort: high", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.4f)) },
                             colors = glassFieldColors(),
                             modifier = Modifier.fillMaxWidth(),
@@ -369,7 +373,7 @@ fun AssistantDetailScreen(
                             )
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(GlassTokens.CardRadius),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GlassTokens.Primary,
                         contentColor = Color.White,
@@ -399,7 +403,7 @@ private fun TextInput(value: String, placeholder: String, onChange: (String) -> 
         value = value,
         onValueChange = onChange,
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(GlassTokens.ControlRadius),
         placeholder = {
             Text(placeholder, fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.45f))
         },

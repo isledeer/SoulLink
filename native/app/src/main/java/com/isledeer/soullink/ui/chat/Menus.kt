@@ -61,7 +61,7 @@ fun TopBarDropdownMenu(
     onTree: () -> Unit,
     onRawDebug: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(GlassTokens.CardRadius)
 
     DropdownMenu(
         expanded = expanded,

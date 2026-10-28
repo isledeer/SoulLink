@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -65,6 +68,7 @@ import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.components.ModelPickerSheet
 import com.isledeer.soullink.ui.liquidGlass
 import com.isledeer.soullink.ui.components.AuroraBackground
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 
 /* ----------------------------- 通用外壳 ----------------------------- */
 
@@ -77,7 +81,7 @@ internal fun PageShell(
     AuroraBackground(
         modifier = Modifier.fillMaxSize()
         ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,7 +95,7 @@ internal fun PageShell(
                         .clip(CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
-                ) { Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp) }
+                ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp)) }
                 Text(title, color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
             }
 
@@ -122,7 +126,7 @@ internal fun SettingRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(GlassTokens.CardRadius))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -179,7 +183,7 @@ fun PreferencesScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                         .background(if (active) GlassTokens.Primary.copy(alpha = 0.2f) else Color.Transparent)
                         .clickable { onSetColorMode(mode) }
                         .padding(vertical = 8.dp),
@@ -230,7 +234,7 @@ fun PreferencesScreen(
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onSave,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
             modifier = Modifier.fillMaxWidth().height(46.dp),
         ) { Text("保存", fontSize = 14.sp) }
@@ -259,7 +263,7 @@ fun FeatureBindingsScreen(
             },
             minLines = 3,
             maxLines = 8,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             placeholder = { Text("所有对话的兜底系统提示词（可被助手 / 对话覆盖）", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f)) },
             colors = GLASS_FIELD_COLORS,
             modifier = Modifier.fillMaxWidth(),
@@ -382,7 +386,7 @@ fun McpServersScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(GlassTokens.CardRadius))
                 .background(GlassTokens.Primary.copy(alpha = 0.16f))
                 .clickable { adding = true }
                 .padding(vertical = 12.dp),
@@ -396,7 +400,7 @@ fun McpServersScreen(
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onSave,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
             modifier = Modifier.fillMaxWidth().height(46.dp),
         ) { Text("保存", fontSize = 14.sp) }
@@ -433,7 +437,7 @@ private fun McpEditDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text(if (initial == null) "添加 MCP 服务器" else "编辑 MCP 服务器", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -442,7 +446,7 @@ private fun McpEditDialog(
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = { Text("名称", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f)) },
                 colors = GLASS_FIELD_COLORS,
                 modifier = Modifier.fillMaxWidth(),
@@ -452,7 +456,7 @@ private fun McpEditDialog(
                 value = url,
                 onValueChange = { url = it },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = { Text("HTTP 端点（如 https://mcp.example.com/mcp）", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f)) },
                 colors = GLASS_FIELD_COLORS,
                 modifier = Modifier.fillMaxWidth(),
@@ -462,7 +466,7 @@ private fun McpEditDialog(
                 value = key,
                 onValueChange = { key = it },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = { Text("API Key（可选）", fontSize = 12.sp, color = GlassTokens.TextSecondary.copy(alpha = 0.5f)) },
                 colors = GLASS_FIELD_COLORS,
                 modifier = Modifier.fillMaxWidth(),
@@ -501,7 +505,7 @@ fun AboutScreen(onBack: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(GlassTokens.CardRadius))
                     .background(Brush.linearGradient(listOf(GlassTokens.Primary, GlassTokens.Accent))),
                 contentAlignment = Alignment.Center,
             ) { Text("S", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold) }
@@ -577,7 +581,9 @@ private fun HelpSection(title: String, content: @Composable ColumnScope.() -> Un
 @Composable
 fun RequestLogScreen(onBack: () -> Unit) {
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
     val entries = RequestLog.snapshot()
+    var crashText by remember { mutableStateOf(com.isledeer.soullink.CrashLog.read(context)) }
     PageShell("请求日志", onBack) {
         Text(
             text = "最近请求（最新在前，最多 200 条）",
@@ -589,7 +595,7 @@ fun RequestLogScreen(onBack: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                 .clickable { clipboard.setText(AnnotatedString(entries.joinToString("\n"))) }
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.End,
@@ -608,6 +614,36 @@ fun RequestLogScreen(onBack: () -> Unit) {
         if (entries.isEmpty()) {
             Text("还没有请求记录", color = GlassTokens.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(14.dp))
         }
+
+        SectionLabel("崩溃日志")
+        if (crashText.isNullOrBlank()) {
+            Text(
+                text = "暂无崩溃记录（崩溃日志会自动写到这里）",
+                color = GlassTokens.TextSecondary,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 14.dp),
+            )
+        } else {
+            Text(
+                text = crashText.orEmpty().takeLast(2000),
+                color = GlassTokens.TextSecondary,
+                fontSize = 10.sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { com.isledeer.soullink.CrashLog.share(context) }) { Text("导出", color = GlassTokens.Primary, fontSize = 12.sp) }
+                TextButton(onClick = {
+                    com.isledeer.soullink.CrashLog.clear(context)
+                    crashText = null
+                }) { Text("清除", color = GlassTokens.TextSecondary, fontSize = 12.sp) }
+            }
+        }
+        TextButton(
+            onClick = { throw RuntimeException("测试崩溃捕获（SoulLink 调试入口）") },
+            modifier = Modifier.padding(horizontal = 14.dp),
+        ) { Text("触发测试崩溃（调试）", color = GlassTokens.Accent, fontSize = 11.sp) }
+
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -635,7 +671,7 @@ fun SponsorScreen(onBack: () -> Unit) {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/isledeer/SoulLink")))
                     }
                 },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
                 modifier = Modifier.fillMaxWidth().height(46.dp),
             ) { Text("去 GitHub 支持", fontSize = 14.sp) }
@@ -673,12 +709,12 @@ fun ShareScreen(onBack: () -> Unit) {
                         }
                         context.startActivity(Intent.createChooser(intent, "分享 SoulLink"))
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(GlassTokens.CardRadius),
                     colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
                 ) { Text("系统分享", fontSize = 13.sp) }
                 Button(
                     onClick = { clipboard.setText(AnnotatedString(url)) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(GlassTokens.CardRadius),
                     colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary.copy(alpha = 0.2f), contentColor = GlassTokens.Primary),
                 ) { Text("复制链接", fontSize = 13.sp) }
             }
@@ -729,7 +765,7 @@ fun VoiceScreen(
                 speaker.configure(settings.ttsRate, settings.ttsPitch)
                 speaker.speak("你好，这是 SoulLink 的语音合成测试。")
             },
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary.copy(alpha = 0.2f), contentColor = GlassTokens.Primary),
             modifier = Modifier.fillMaxWidth(),
         ) { Text("试听", fontSize = 13.sp) }
@@ -745,7 +781,7 @@ fun VoiceScreen(
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onSave,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
             modifier = Modifier.fillMaxWidth().height(46.dp),
         ) { Text("保存", fontSize = 14.sp) }

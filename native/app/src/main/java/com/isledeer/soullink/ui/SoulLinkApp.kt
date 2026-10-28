@@ -8,6 +8,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,11 +20,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -38,6 +47,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.isledeer.soullink.CrashLog
 import com.isledeer.soullink.data.parseMcpServers
 import com.isledeer.soullink.ui.assistant.AssistantDetailScreen
 import com.isledeer.soullink.ui.assistant.AssistantListScreen
@@ -66,6 +76,7 @@ import com.isledeer.soullink.ui.worldbook.WorldbookViewModel
 import com.isledeer.soullink.ui.components.AuroraBackground
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import dev.chrisbanes.haze.HazeState
 import org.koin.androidx.compose.koinViewModel
 
 object Routes {
@@ -103,14 +114,20 @@ object Routes {
 @Composable
 fun SoulLinkApp() {
     val navController = rememberNavController()
+    val hazeState = remember { HazeState() }
 
-    NavHost(
+    val context = LocalContext.current
+    var crashText by remember { mutableStateOf(CrashLog.read(context)) }
+
+    CompositionLocalProvider(LocalAppHaze provides hazeState) {
+        Box(modifier = Modifier.fillMaxSize()) {
+        NavHost(
         navController = navController,
         startDestination = Routes.CHAT,
-        enterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(240)) { it / 16 } },
-        exitTransition = { fadeOut(tween(180)) },
-        popEnterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(240)) { -it / 16 } },
-        popExitTransition = { fadeOut(tween(180)) },
+        enterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(260)) { it / 3 } },
+        exitTransition = { fadeOut(tween(160)) + slideOutHorizontally(tween(160)) { -it / 3 } },
+        popEnterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(260)) { -it / 3 } },
+        popExitTransition = { fadeOut(tween(160)) + slideOutHorizontally(tween(160)) { it / 3 } },
     ) {
         composable(Routes.CHAT) {
             ChatRoute(
@@ -242,6 +259,51 @@ fun SoulLinkApp() {
                 assistantId = entry.arguments?.getString("id").orEmpty(),
                 onBack = { navController.popBackStack() },
             )
+        }
+    }
+        }
+
+        crashText?.let { text ->
+            CrashCard(
+                text = text,
+                onShare = { CrashLog.share(context) },
+                onDismiss = {
+                    CrashLog.clear(context)
+                    crashText = null
+                },
+            )
+        }
+    }
+}
+
+/** 上次崩溃提示卡片（含导出与忽略） */
+@Composable
+private fun CrashCard(
+    text: String,
+    onShare: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = {}) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(GlassTokens.SheetBg.copy(alpha = 0.98f), RoundedCornerShape(GlassTokens.OverlayRadius))
+                .padding(18.dp)
+        ) {
+            Text("上次会话崩溃了", color = GlassTokens.TextPrimary, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = text.take(600),
+                color = GlassTokens.TextSecondary,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 12,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text("忽略", color = GlassTokens.TextSecondary) }
+                TextButton(onClick = onShare) { Text("导出日志", color = GlassTokens.Primary) }
+            }
         }
     }
 }

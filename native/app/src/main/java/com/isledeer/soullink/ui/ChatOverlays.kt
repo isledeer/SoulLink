@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.MenuBook
@@ -81,6 +85,7 @@ fun DrawerContent(
         modifier = Modifier
             .fillMaxHeight()
             .width(300.dp)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
             .background(GlassTokens.SheetBg)
             .padding(horizontal = 14.dp, vertical = 20.dp)
     ) {
@@ -126,7 +131,7 @@ fun DrawerContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .clickable {
                         when (entry.label) {
                             "助手", "角色" -> onOpenAssistants()
@@ -158,7 +163,7 @@ fun DrawerContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                         .background(
                             if (active) GlassTokens.Primary.copy(alpha = 0.14f) else Color.Transparent
                         )
@@ -193,7 +198,7 @@ fun DrawerContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                 .clickable(onClick = onOpenSettings)
                 .padding(horizontal = 10.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -252,7 +257,7 @@ private fun SheetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(GlassTokens.CardRadius))
             .clickable {
                 action()
                 onDismiss()
@@ -272,7 +277,7 @@ private fun SheetRow(
                 fontSize = 11.sp,
             )
         }
-        Text("›", color = GlassTokens.TextSecondary, fontSize = 16.sp)
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = GlassTokens.TextSecondary, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -308,7 +313,7 @@ fun ConversationSettingsDialog(
                 onValueChange = { systemPrompt = it },
                 minLines = 3,
                 maxLines = 6,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 placeholder = {
                     Text("例如：你是…，始终以第一人称回答。", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 13.sp)
                 },

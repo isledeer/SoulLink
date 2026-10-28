@@ -37,6 +37,8 @@ import com.isledeer.soullink.ui.chat.BrandIcon
 import com.isledeer.soullink.ui.liquidGlass
 import com.isledeer.soullink.ui.components.AuroraBackground
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
 
 @Composable
 private fun headerBar(
@@ -57,7 +59,7 @@ private fun headerBar(
                 .clip(CircleShape)
                 .clickable(onClick = onBack),
             contentAlignment = Alignment.Center,
-        ) { Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp) }
+        ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp)) }
         Text(title, color = GlassTokens.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
         actions()
     }
@@ -78,7 +80,7 @@ fun ProviderListScreen(
     AuroraBackground(
         modifier = Modifier.fillMaxSize()
         ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp)) {
             headerBar("提供商", onBack) {
                 Box(
                     modifier = Modifier
@@ -105,7 +107,7 @@ fun ProviderListScreen(
 
             Button(
                 onClick = onSave,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = GlassTokens.Primary,
                     contentColor = Color.White,
@@ -178,7 +180,7 @@ private fun Tag(text: String, color: Color) {
         color = color,
         fontSize = 10.sp,
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
             .background(color.copy(alpha = 0.15f))
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
@@ -211,7 +213,7 @@ fun ProviderDetailScreen(
     AuroraBackground(
         modifier = Modifier.fillMaxSize()
         ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp)) {
             headerBar(provider.name.ifBlank { "未命名" }, onBack) {
                 Box(
                     modifier = Modifier
@@ -361,7 +363,7 @@ private fun ConfigTab(
         Spacer(Modifier.height(6.dp))
         Button(
             onClick = onQueryBalance,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(
                 containerColor = GlassTokens.Primary.copy(alpha = 0.2f),
                 contentColor = GlassTokens.Primary,
@@ -377,7 +379,7 @@ private fun ConfigTab(
         Button(
             onClick = onTest,
             enabled = !testing,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
             modifier = Modifier.fillMaxWidth(),
         ) { Text(if (testing) "测试中…" else "测试连通性", fontSize = 13.sp) }
@@ -438,7 +440,7 @@ private fun ModelsTab(
         ) {
             Button(
                 onClick = onOpenFetch,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.BubbleAi, contentColor = GlassTokens.TextPrimary),
                 modifier = Modifier.weight(1f),
             ) {
@@ -448,7 +450,7 @@ private fun ModelsTab(
             }
             Button(
                 onClick = onOpenAdd,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
                 modifier = Modifier.weight(1f),
             ) {
@@ -481,7 +483,7 @@ private fun AdvancedTab(
             onValueChange = { headers = it },
             minLines = 4,
             maxLines = 8,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(GlassTokens.ControlRadius),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
@@ -492,7 +494,7 @@ private fun AdvancedTab(
             onValueChange = { bodies = it },
             minLines = 4,
             maxLines = 8,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(GlassTokens.ControlRadius),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
@@ -550,7 +552,7 @@ private fun FetchModelsSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                                 .clickable {
                                     checked = if (isChecked) (checked - model).toMutableSet() else (checked + model).toMutableSet()
                                 }
@@ -574,7 +576,7 @@ private fun FetchModelsSheet(
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = {
                     Text("搜索模型名", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
                 },
@@ -592,7 +594,7 @@ private fun FetchModelsSheet(
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = { onConfirm(checked.toList()) },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("保存勾选", fontSize = 13.sp) }
@@ -645,7 +647,7 @@ private fun TextFieldCard(
                 value = value,
                 onValueChange = onChange,
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GlassTokens.FieldBgFocused,
@@ -738,7 +740,7 @@ private fun ModelSettingsSheet(
                 value = alias,
                 onValueChange = { alias = it },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 placeholder = {
                     Text("显示名称（留空用原名）", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
                 },
@@ -764,7 +766,7 @@ private fun ModelSettingsSheet(
                 value = context,
                 onValueChange = { context = it.filter { ch -> ch.isDigit() } },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(GlassTokens.ControlRadius),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GlassTokens.FieldBgFocused,
                     unfocusedContainerColor = GlassTokens.FieldBg,
@@ -805,7 +807,7 @@ private fun ModelSettingsSheet(
                     onChange(withModelSettings(provider, model, obj))
                     onDismiss()
                 },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("保存设置", fontSize = 13.sp) }

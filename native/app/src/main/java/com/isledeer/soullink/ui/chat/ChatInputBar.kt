@@ -22,7 +22,13 @@ import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -76,9 +84,9 @@ fun ChatInputBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(GlassTokens.OverlayRadius))
             .background(GlassTokens.InputBg)
-            .border(BorderStroke(1.dp, GlassTokens.GlassBorder), RoundedCornerShape(24.dp))
+            .border(BorderStroke(1.dp, GlassTokens.GlassBorder), RoundedCornerShape(GlassTokens.OverlayRadius))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         /* 第一行：文本 + 语音 */
@@ -157,13 +165,13 @@ fun ChatInputBar(
             Spacer(Modifier.weight(1f))
 
             Box {
-                Text(
-                    text = "/",
-                    color = GlassTokens.TextSecondary,
-                    fontSize = 18.sp,
+                Icon(
+                    imageVector = Icons.Outlined.Terminal,
+                    contentDescription = "斜杠指令",
+                    tint = GlassTokens.TextSecondary,
                     modifier = Modifier
-                        .clickable { slashMenu = true }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .size(20.dp)
+                        .clickable { slashMenu = true },
                 )
                 SlashCommandPopup(
                     expanded = slashMenu,
@@ -176,10 +184,24 @@ fun ChatInputBar(
                 Icon(Icons.Outlined.Add, contentDescription = "附件", tint = GlassTokens.TextSecondary, modifier = Modifier.size(22.dp))
             }
 
+            val sendScale by animateFloatAsState(
+                targetValue = if (canSend || isGenerating) 1f else 0.94f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                label = "sendScale",
+            )
+            val stopRotate by animateFloatAsState(
+                targetValue = if (isGenerating) 90f else 0f,
+                animationSpec = tween(220),
+                label = "stopRotate",
+            )
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
+                    .scale(sendScale)
                     .then(
                         if (isGenerating) Modifier.background(GlassTokens.Accent)
                         else if (canSend) Modifier.background(
@@ -193,9 +215,14 @@ fun ChatInputBar(
                 contentAlignment = Alignment.Center,
             ) {
                 if (isGenerating) {
-                    Icon(Icons.Outlined.Stop, contentDescription = "停止", tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.Stop, contentDescription = "停止", tint = Color.White, modifier = Modifier.size(20.dp).rotate(stopRotate))
                 } else {
-                    Text("↑", color = if (canSend) Color.White else Color(0x66FFFFFF), fontSize = 18.sp)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = "发送",
+                        tint = if (canSend) Color.White else GlassTokens.TextDisabled,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }

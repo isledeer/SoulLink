@@ -83,7 +83,7 @@ fun ModelPickerSheet(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                                     .clickable { onPick(provider, model) }
                                     .padding(horizontal = 12.dp, vertical = 12.dp),
                             )

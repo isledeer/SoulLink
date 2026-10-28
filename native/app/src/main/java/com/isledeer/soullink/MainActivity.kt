@@ -2,8 +2,9 @@ package com.isledeer.soullink
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -15,7 +16,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import com.isledeer.soullink.data.SettingsRepository
 import com.isledeer.soullink.ui.AppTheme
 import com.isledeer.soullink.ui.GlassTokens
@@ -39,7 +39,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         applyPersistedTheme()
-        setupSystemBars()
+        // edge-to-edge：状态栏/导航栏透明，所有页面用 WindowInsets 自行避让
+        val barStyle = if (lightMode) {
+            SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        } else {
+            SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        }
+        enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
 
         setContent {
             val scheme = if (lightMode) {
@@ -96,16 +102,6 @@ class MainActivity : ComponentActivity() {
         window.setBackgroundDrawable(ColorDrawable(GlassTokens.BackgroundBottom.toArgb()))
     }
 
-    private fun setupSystemBars() {
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = GlassTokens.BackgroundTop.toArgb()
-        window.navigationBarColor = GlassTokens.BackgroundBottom.toArgb()
-
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = lightMode
-            isAppearanceLightNavigationBars = lightMode
-        }
-    }
 
     companion object {
         /** 统一排版：字号 / 字重 / 字距，Material 组件默认继承 */

@@ -130,7 +130,7 @@ private fun AttachIcon(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(8.dp),
+        modifier = Modifier.clip(RoundedCornerShape(GlassTokens.ControlRadius)).clickable(onClick = onClick).padding(8.dp),
     ) {
         Icon(icon, contentDescription = null, tint = GlassTokens.TextPrimary, modifier = Modifier.size(24.dp))
         Spacer(Modifier.height(4.dp))
@@ -147,7 +147,7 @@ private fun SheetListRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -201,7 +201,7 @@ fun ToolsBottomSheet(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -231,7 +231,7 @@ private fun ToolSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
             .clickable(onClick = onToggle)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -270,7 +270,7 @@ fun SlashCommandPopup(
         expanded = expanded,
         onDismissRequest = onDismiss,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
             .background(GlassTokens.MenuBg),
     ) {
         SlashRow("/clear", Icons.Outlined.DeleteSweep) { onCommand("/clear"); onDismiss() }
@@ -323,7 +323,7 @@ fun SearchEngineBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -341,7 +341,7 @@ fun SearchEngineBottomSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

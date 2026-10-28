@@ -202,7 +202,7 @@ fun BackupScreen(onBack: () -> Unit) {
                     if (!ok) message = "导出失败"
                 }
             },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary, contentColor = Color.White),
             modifier = Modifier.fillMaxWidth().height(46.dp),
         ) { Text("导出备份并分享", fontSize = 14.sp) }
@@ -210,7 +210,7 @@ fun BackupScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Button(
             onClick = { pickBackup.launch(arrayOf("application/json", "text/*", "*/*")) },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Primary.copy(alpha = 0.2f), contentColor = GlassTokens.Primary),
             modifier = Modifier.fillMaxWidth().height(46.dp),
         ) { Text("从文件导入备份", fontSize = 14.sp) }
@@ -557,7 +557,7 @@ fun StorageScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = { confirmVisible = true },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(GlassTokens.CardRadius),
             colors = ButtonDefaults.buttonColors(containerColor = GlassTokens.Accent, contentColor = Color.White),
             modifier = Modifier.fillMaxWidth().height(46.dp),
         ) { Text("清空全部数据", fontSize = 14.sp) }
@@ -572,7 +572,7 @@ fun StorageScreen(onBack: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                    .background(GlassTokens.BackgroundBottom.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                     .padding(18.dp)
             ) {
                 Text("清空全部数据？", color = GlassTokens.TextPrimary, fontSize = 15.sp)

@@ -69,6 +69,9 @@ dependencies {
     // ---------- 协程 ----------
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    // ---------- 玻璃：haze（真实背景模糊；低版本自动降级） ----------
+    implementation("dev.chrisbanes.haze:haze:0.7.4")
+
     // ---------- Room（消息落盘） ----------
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

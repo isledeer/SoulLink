@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,8 +65,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.isledeer.soullink.ui.GlassTokens
+import com.isledeer.soullink.ui.bouncyClickable
 import com.isledeer.soullink.ui.liquidGlass
 import com.isledeer.soullink.ui.components.AuroraBackground
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 
 /**
  * 设置中心总览页（对标 RikkaHub 分组结构）。
@@ -95,7 +100,7 @@ fun SettingsOverviewScreen(
     AuroraBackground(
         modifier = Modifier.fillMaxSize()
         ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -109,7 +114,7 @@ fun SettingsOverviewScreen(
                         .clip(CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
-                ) { Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp) }
+                ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp)) }
                 Text("设置", color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
             }
 
@@ -162,8 +167,8 @@ private fun OverviewRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(GlassTokens.CardRadius))
+            .bouncyClickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -205,7 +210,7 @@ private fun ColorModeRow(selected: String, onSelect: (String) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .background(if (active) GlassTokens.Primary.copy(alpha = 0.2f) else Color.Transparent)
                     .clickable { onSelect(mode) }
                     .padding(vertical = 8.dp),
@@ -233,7 +238,7 @@ fun SearchServiceScreen(
     AuroraBackground(
         modifier = Modifier.fillMaxSize()
         ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -247,7 +252,7 @@ fun SearchServiceScreen(
                         .clip(CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
-                ) { Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp) }
+                ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp)) }
                 Text("搜索服务", color = GlassTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
             }
 
@@ -272,7 +277,7 @@ fun SearchServiceScreen(
                             value = keys[id].orEmpty(),
                             onValueChange = { onChangeKey(id, it) },
                             singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(GlassTokens.ControlRadius),
                             placeholder = {
                                 Text("$label API Key", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp)
                             },
@@ -292,7 +297,7 @@ fun SearchServiceScreen(
 
                 Button(
                     onClick = onSave,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(GlassTokens.CardRadius),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GlassTokens.Primary,
                         contentColor = Color.White,

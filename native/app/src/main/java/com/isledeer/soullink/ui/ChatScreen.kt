@@ -7,12 +7,16 @@ import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +33,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +55,7 @@ import com.isledeer.soullink.util.VoiceInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.material.icons.outlined.BarChart
 
 /**
  * 聊天主界面（唯一一级页面）。
@@ -180,24 +186,29 @@ fun ChatScreen(
         }
     }
 
-    val atBottom by remember {
+    val density = LocalDensity.current
+    val followThresholdPx = with(density) { 200.dp.toPx() }
+
+    // 距底部 <200dp 才算「在底部」——向上翻看过历史时绝不抢滚动
+    val nearBottom by remember {
         derivedStateOf {
             val info = listState.layoutInfo
-            val lastVisible = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
-            lastVisible.index >= info.totalItemsCount - 1
+            val lastVisible = info.visibleItemsInfo.lastOrNull()
+            lastVisible == null ||
+                (info.viewportEndOffset - (lastVisible.offset + lastVisible.size)) < followThresholdPx
         }
     }
 
-    // 新消息出现：动画跟随到底
+    // 新消息到达：动画滚一次
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && atBottom) {
+        if (messages.isNotEmpty() && nearBottom) {
             listState.animateScrollToItem(messages.lastIndex)
         }
     }
 
-    // 流式中：每 ~64 字符轻量跟随（避免逐 token 动画造成抖动/卡顿）
-    LaunchedEffect(messages.lastOrNull()?.text?.length?.div(64)) {
-        if (isGenerating && messages.isNotEmpty() && atBottom) {
+    // 流式生成：跟随节流 flush 的文本变化（每 ~48 字符轻量 scrollToItem）
+    LaunchedEffect(messages.lastOrNull()?.text?.length?.div(48)) {
+        if (isGenerating && messages.isNotEmpty() && nearBottom) {
             listState.scrollToItem(messages.lastIndex)
         }
     }
@@ -245,9 +256,7 @@ fun ChatScreen(
         },
     ) {
         AuroraBackground(
-            modifier = Modifier
-                .statusBarsPadding()
-                .imePadding()
+            modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
         ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -554,7 +563,7 @@ private fun PendingImagePreview(base64: String, onClear: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius)),
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -562,7 +571,7 @@ private fun PendingImagePreview(base64: String, onClear: () -> Unit) {
                 color = GlassTokens.Accent,
                 fontSize = 11.sp,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .clickable(onClick = onClear)
                     .padding(6.dp),
             )
@@ -581,7 +590,7 @@ private fun EditMessageDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.96f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.96f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("编辑消息", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -591,7 +600,7 @@ private fun EditMessageDialog(
                 onValueChange = { text = it },
                 minLines = 3,
                 maxLines = 8,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GlassTokens.FieldBgFocused,
                     unfocusedContainerColor = GlassTokens.FieldBg,
@@ -628,9 +637,9 @@ private fun QuickPromptChips(prompts: List<String>, onPick: (String) -> Unit) {
                 color = GlassTokens.TextPrimary,
                 fontSize = 11.sp,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .background(GlassTokens.Primary.copy(alpha = 0.14f))
-                    .clickable { onPick(prompt) }
+                    .bouncyClickable { onPick(prompt) }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             )
         }
@@ -678,7 +687,7 @@ private fun SearchDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("在会话中搜索", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -687,7 +696,7 @@ private fun SearchDialog(
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(GlassTokens.CardRadius),
                 placeholder = { Text("输入关键词", color = GlassTokens.TextSecondary.copy(alpha = 0.5f), fontSize = 12.sp) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GlassTokens.FieldBgFocused,
@@ -718,7 +727,7 @@ private fun SearchDialog(
                         fontSize = 12.sp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .clickable { clipboard.setText(AnnotatedString(message.text)) }
                             .padding(vertical = 6.dp),
                     )
@@ -744,7 +753,7 @@ private fun UsageDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("Token 用量", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -785,7 +794,7 @@ private fun MemoryDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("会话记忆", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -817,7 +826,7 @@ private fun McpDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("会话中的 MCP", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -833,7 +842,7 @@ private fun McpDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                             .clickable { onToggleMcp(id) }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -863,7 +872,7 @@ private fun SkillsDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("会话中的技能", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -872,7 +881,7 @@ private fun SkillsDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                         .clickable { onToggle(skill.id) }
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -907,7 +916,7 @@ private fun TreeDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("消息树", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -952,7 +961,7 @@ private fun RawLogDialog(onDismiss: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("RAW 调试面板", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -1000,7 +1009,7 @@ private fun ContextDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(20.dp))
+                .background(GlassTokens.SheetBg.copy(alpha = 0.97f), RoundedCornerShape(GlassTokens.CardRadius))
                 .padding(18.dp)
         ) {
             Text("上下文管理", color = GlassTokens.TextPrimary, fontSize = 15.sp)
@@ -1052,16 +1061,24 @@ private fun GameHudCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(GlassTokens.CardRadius))
             .background(GlassTokens.BubbleAi.copy(alpha = 0.6f))
+            .animateContentSize()
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                Icons.Outlined.BarChart,
+                contentDescription = null,
+                tint = GlassTokens.Primary,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(Modifier.width(4.dp))
             Text(
-                text = "◆ 状态",
+                text = "状态",
                 color = GlassTokens.Primary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1111,7 +1128,7 @@ private fun GameHudCard(
                             color = if (active) GlassTokens.Primary else GlassTokens.TextSecondary,
                             fontSize = 10.sp,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                                 .background(if (active) GlassTokens.Primary.copy(alpha = 0.18f) else GlassTokens.Divider)
                                 .clickable { onSwitch(thread.id) }
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -1123,7 +1140,7 @@ private fun GameHudCard(
                             color = GlassTokens.TextSecondary,
                             fontSize = 10.sp,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                                 .background(GlassTokens.Divider)
                                 .clickable { onStartNpc(npc.id) }
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -1149,9 +1166,9 @@ private fun ChoiceBar(choices: List<String>, onPick: (String) -> Unit) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .background(GlassTokens.Primary.copy(alpha = 0.13f))
-                    .clickable { onPick(text) }
+                    .bouncyClickable { onPick(text) }
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

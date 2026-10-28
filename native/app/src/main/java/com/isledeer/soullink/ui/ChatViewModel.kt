@@ -613,6 +613,20 @@ class ChatViewModel(
             var finalImage: String? = null
             var cancelled = false
             var failed = false
+            // 流式节流：chunk 先进 StringBuilder，~90ms 才 flush 一次到 StateFlow，
+            // 避免每个 token 都触发全列表重组
+            val pendingText = StringBuilder()
+            var lastFlushAt = 0L
+
+            fun flushPending() {
+                if (pendingText.isEmpty()) return
+                val chunk = pendingText.toString()
+                pendingText.clear()
+                finalText += chunk
+                receivedChars += chunk.length
+                patchMessage(messageId) { it.copy(text = finalText) }
+            }
+
             try {
                 // 工具环路：模型发 tool_calls -> 本地执行 -> 回填 -> 自动续流（上限 MAX_TOOL_ROUNDS 轮）
                 var turnsInFlight = turns
@@ -638,9 +652,12 @@ class ChatViewModel(
                     ).collect { event ->
                         when (event) {
                             is SseEvent.Content -> {
-                                finalText += event.text
-                                receivedChars += event.text.length
-                                patchMessage(messageId) { it.copy(text = finalText) }
+                                pendingText.append(event.text)
+                                val now = SystemClock.elapsedRealtime()
+                                if (now - lastFlushAt >= STREAM_FLUSH_MS) {
+                                    lastFlushAt = now
+                                    flushPending()
+                                }
                             }
 
                             is SseEvent.Reasoning -> {
@@ -657,6 +674,9 @@ class ChatViewModel(
                             SseEvent.Done -> Unit
                         }
                     }
+
+                    // 每轮结束 flush 残段（保证不足 90ms 的尾巴也显示）
+                    flushPending()
 
                     if (toolCalls.isEmpty()) break
 
@@ -677,6 +697,7 @@ class ChatViewModel(
                 cancelled = true
             } catch (e: Exception) {
                 failed = true
+                flushPending()
                 val reason = e.message ?: "未知错误"
                 if (finalText.isBlank()) finalText = "请求失败：$reason"
                 patchMessage(messageId) { it.copy(text = finalText, isError = true) }
@@ -1167,6 +1188,9 @@ class ChatViewModel(
         private const val MAX_TOOL_ROUNDS = 4
 
         /** 超过 12 条消息触发自动摘要，保留最近 8 条原文 */
+        /** 流式 UI 刷新间隔：chunk 累积到该间隔才写一次 StateFlow */
+        private const val STREAM_FLUSH_MS = 90L
+
         private const val MEMORY_THRESHOLD = 12
         private const val KEEP_RECENT = 8
 

@@ -38,6 +38,7 @@ import com.isledeer.soullink.ui.components.EmphasizedText
 import com.isledeer.soullink.ui.components.UIAvatar
 import com.isledeer.soullink.ui.liquidGlass
 import com.isledeer.soullink.ui.components.AuroraBackground
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 
 /**
  * 助手列表：搜索 + 卡片列表 + 新建。
@@ -60,6 +61,7 @@ fun AssistantListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(
@@ -76,7 +78,7 @@ fun AssistantListScreen(
                         .clip(CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
-                ) { Text("←", color = GlassTokens.TextSecondary, fontSize = 18.sp) }
+                ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = GlassTokens.TextSecondary, modifier = Modifier.size(20.dp)) }
 
                 EmphasizedText(
                     text = "助手",

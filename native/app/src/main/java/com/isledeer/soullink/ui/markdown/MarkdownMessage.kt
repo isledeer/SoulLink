@@ -182,7 +182,7 @@ fun CodeBlockView(code: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(GlassTokens.ControlRadius))
             .background(GlassTokens.GlassFill)
             .padding(10.dp)
     ) {
@@ -193,11 +193,11 @@ fun CodeBlockView(code: String) {
         ) {
             Text("代码", color = GlassTokens.TextSecondary, fontSize = 10.sp)
             Text(
-                text = if (copied) "已复制 ✓" else "复制",
+                text = if (copied) "已复制" else "复制",
                 color = GlassTokens.TextSecondary,
                 fontSize = 10.sp,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                     .clickable {
                         clipboard.setText(AnnotatedString(code))
                         copied = true
@@ -286,7 +286,7 @@ fun MermaidView(code: String, modifier: Modifier = Modifier) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                 .background(GlassTokens.GlassFill)
                 .clickable { expanded = true }
                 .padding(12.dp),
@@ -322,7 +322,7 @@ fun MermaidView(code: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(280.dp)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(GlassTokens.ControlRadius)),
     )
 }
 

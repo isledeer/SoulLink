@@ -3,7 +3,7 @@ package com.isledeer.soullink.ui
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
-import android.util.LruCache
+import java.util.LinkedHashMap
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -29,6 +29,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Replay
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Icon
@@ -227,7 +232,7 @@ fun MessageBubble(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .heightIn(max = 200.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(GlassTokens.ControlRadius))
                                     .padding(bottom = 6.dp),
                             )
                         }
@@ -286,15 +291,15 @@ fun MessageBubble(
                     modifier = Modifier.padding(top = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ActionText("复制", onCopy)
+                    ActionIcon(Icons.Outlined.ContentCopy, "复制", onCopy)
                     if (!isUser) {
-                        ActionText("重生成", onRegenerate)
-                        ActionText("朗读", onSpeak)
+                        ActionIcon(Icons.Outlined.Replay, "重生成", onRegenerate)
+                        ActionIcon(Icons.Outlined.VolumeUp, "朗读", onSpeak)
                         if (message.isInterrupted) {
-                            ActionText("继续生成", onContinue)
+                            ActionIcon(Icons.Outlined.PlayArrow, "继续生成", onContinue)
                         }
                     }
-                    ActionText("更多", onMore)
+                    ActionIcon(Icons.Outlined.MoreHoriz, "更多", onMore)
 
                     if (!isUser && message.generationSpeed > 0) {
                         Spacer(Modifier.width(6.dp))
@@ -359,15 +364,20 @@ private fun StreamingDots() {
 }
 
 @Composable
-private fun ActionText(label: String, onClick: () -> Unit) {
-    Text(
-        text = label,
-        color = GlassTokens.TextSecondary.copy(alpha = 0.85f),
-        fontSize = 10.sp,
+private fun ActionIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Icon(
+        imageVector = icon,
+        contentDescription = contentDescription,
+        tint = GlassTokens.TextSecondary.copy(alpha = 0.85f),
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .size(16.dp)
+            .clip(RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 3.dp),
+            .padding(1.dp),
     )
 }
 
@@ -379,10 +389,12 @@ private fun formatSpeed(value: Double): String {
 /* ------------------------------ 图片缩略 ------------------------------ */
 
 private const val THUMB_MAX_PX = 1280
-private const val THUMB_CACHE_MB = 24
+private const val THUMB_CACHE_MAX = 20
 
-private val thumbCache = object : LruCache<String, Bitmap>(THUMB_CACHE_MB * 1024 * 1024) {
-    override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+/** 访问序 LRU：上限 20 张，超限淘汰最久未用 */
+private val thumbCache = object : LinkedHashMap<String, Bitmap>(THUMB_CACHE_MAX, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Bitmap>?): Boolean =
+        size > THUMB_CACHE_MAX
 }
 
 private fun decodeSampled(bytes: ByteArray): Bitmap? = runCatching {
@@ -402,12 +414,14 @@ private fun decodeSampled(bytes: ByteArray): Bitmap? = runCatching {
 @Composable
 internal fun rememberThumbnail(base64: String): Bitmap? {
     val bitmap by produceState<Bitmap?>(initialValue = null, base64) {
-        val cached = thumbCache.get(base64)
-        value = cached ?: withContext(Dispatchers.IO) {
+        val cached = synchronized(thumbCache) { thumbCache[base64] }
+        value = cached ?: withContext(Dispatchers.Default) {
             runCatching {
                 Base64.decode(base64, Base64.DEFAULT)
             }.getOrNull()?.let { bytes ->
-                decodeSampled(bytes)?.also { decoded -> thumbCache.put(base64, decoded) }
+                decodeSampled(bytes)?.also { decoded ->
+                    synchronized(thumbCache) { thumbCache[base64] = decoded }
+                }
             }
         }
     }

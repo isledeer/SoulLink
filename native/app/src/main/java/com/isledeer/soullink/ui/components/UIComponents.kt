@@ -97,7 +97,7 @@ fun CardGroup(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(GlassTokens.CardRadius))
                 .background(GlassTokens.BubbleAi.copy(alpha = 0.5f))
                 .padding(4.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
