@@ -20,9 +20,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.haze
 
 /**
  * 玻璃面板 v2。
@@ -46,9 +46,13 @@ fun Modifier.liquidGlass(
     var result = this.clip(shape)
 
     result = if (hazeState != null) {
-        result.hazeEffect(
+        result.haze(
             state = hazeState,
-            style = HazeStyle(backgroundColor = tint),
+            style = HazeDefaults.style(
+                backgroundColor = tint,
+                blurRadius = 18.dp,
+                noiseFactor = 0.08f,
+            ),
         )
     } else {
         // 无 haze 时（理论上不会发生）：降级为渐变玻璃

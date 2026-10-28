@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.isledeer.soullink.ui.GlassTokens
 import com.isledeer.soullink.ui.LocalAppHaze
-import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.hazeChild
 import kotlin.random.Random
 
 /**
@@ -55,7 +55,7 @@ fun AuroraBackground(
             )
         )
 
-    Box(modifier = if (haze != null) base.hazeSource(haze) else base) {
+    Box(modifier = if (haze != null) base.hazeChild(haze) else base) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
