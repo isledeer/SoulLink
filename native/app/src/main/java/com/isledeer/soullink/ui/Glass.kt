@@ -85,8 +85,8 @@ val LocalAppHaze = staticCompositionLocalOf<HazeState?> { null }
  */
 @Composable
 fun Modifier.bouncyClickable(
-    onClick: () -> Unit,
     pressedScale: Float = 0.92f,
+    onClick: () -> Unit,
 ): Modifier {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
